@@ -1,0 +1,85 @@
+<Window x:Class="VRPLauncher.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="VR Pinball Launcher"
+        Width="1280" Height="720"
+        WindowStartupLocation="CenterScreen"
+        Background="Black"
+        FontFamily="Segoe UI">
+
+    <!-- Everything is laid out at 1920x1080 and scaled to the window, so text stays proportionally large at any resolution. -->
+    <Viewbox Stretch="Uniform">
+        <Grid Width="1920" Height="1080">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="100" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="250" />
+                <RowDefinition Height="90" />
+            </Grid.RowDefinitions>
+
+            <!-- Header -->
+            <TextBlock Grid.Row="0" Margin="50,0" VerticalAlignment="Center"
+                       Text="VR PINBALL" FontSize="46" FontWeight="Black" Foreground="#FFD400" />
+            <TextBlock x:Name="LetterText" Grid.Row="0" HorizontalAlignment="Center" VerticalAlignment="Center"
+                       FontSize="64" FontWeight="Black" Foreground="#FFD400" />
+            <TextBlock x:Name="CounterText" Grid.Row="0" Margin="50,0" HorizontalAlignment="Right" VerticalAlignment="Center"
+                       FontSize="46" FontWeight="Bold" Foreground="White" />
+
+            <!-- Carousel: the selected table in the middle, two neighbours on each side. Slots are created in code. -->
+            <Grid x:Name="Carousel" Grid.Row="1" Margin="20,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="0.8*" />
+                    <ColumnDefinition Width="1*" />
+                    <ColumnDefinition Width="2.4*" />
+                    <ColumnDefinition Width="1*" />
+                    <ColumnDefinition Width="0.8*" />
+                </Grid.ColumnDefinitions>
+            </Grid>
+
+            <!-- Selected table title -->
+            <StackPanel Grid.Row="2" VerticalAlignment="Center" Margin="60,0">
+                <TextBlock x:Name="TitleText" HorizontalAlignment="Center" TextTrimming="CharacterEllipsis"
+                           FontSize="84" FontWeight="Bold" Foreground="White" />
+                <TextBlock x:Name="DetailsText" HorizontalAlignment="Center" TextTrimming="CharacterEllipsis"
+                           FontSize="44" Foreground="#C8C8C8" Margin="0,6,0,0" />
+            </StackPanel>
+
+            <!-- Footer: controls help and the last key pressed (handy for checking what the stub sends) -->
+            <Border Grid.Row="3" Background="#1A1A1A">
+                <Grid Margin="50,0">
+                    <TextBlock x:Name="HelpText" VerticalAlignment="Center" FontSize="34" Foreground="#E0E0E0" />
+                    <TextBlock x:Name="LastKeyText" HorizontalAlignment="Right" VerticalAlignment="Center"
+                               FontSize="28" Foreground="#909090" />
+                </Grid>
+            </Border>
+
+            <!-- Errors and notices -->
+            <Border x:Name="StatusPanel" Grid.Row="2" VerticalAlignment="Bottom" HorizontalAlignment="Center"
+                    Background="#B00020" CornerRadius="10" Padding="30,12" Visibility="Collapsed">
+                <TextBlock x:Name="StatusText" FontSize="36" FontWeight="SemiBold" Foreground="White" TextWrapping="Wrap" MaxWidth="1700" />
+            </Border>
+
+            <!-- Hold-to-exit feedback -->
+            <Border x:Name="ExitPanel" Grid.RowSpan="4" HorizontalAlignment="Center" VerticalAlignment="Center"
+                    Background="#E0000000" BorderBrush="#FFD400" BorderThickness="6" CornerRadius="16" Padding="60,40"
+                    Visibility="Collapsed">
+                <StackPanel>
+                    <TextBlock Text="Keep holding to quit" FontSize="64" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" />
+                    <ProgressBar x:Name="ExitProgress" Height="36" Width="800" Margin="0,30,0,0" Maximum="1"
+                                 Foreground="#FFD400" Background="#333" BorderThickness="0" />
+                </StackPanel>
+            </Border>
+
+            <!-- Shown while VPX is running -->
+            <Grid x:Name="PlayingPanel" Grid.RowSpan="4" Background="Black" Visibility="Collapsed">
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock Text="NOW PLAYING" FontSize="56" FontWeight="Black" Foreground="#FFD400" HorizontalAlignment="Center" />
+                    <TextBlock x:Name="PlayingText" FontSize="84" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center"
+                               TextTrimming="CharacterEllipsis" MaxWidth="1800" Margin="0,20,0,0" />
+                    <TextBlock Text="Quit the table in VPX to come back here" FontSize="40" Foreground="#C8C8C8"
+                               HorizontalAlignment="Center" Margin="0,40,0,0" />
+                </StackPanel>
+            </Grid>
+        </Grid>
+    </Viewbox>
+</Window>

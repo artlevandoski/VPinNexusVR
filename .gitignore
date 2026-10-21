@@ -1,0 +1,10 @@
+bin/
+obj/
+publish/
+.vs/
+*.user
+*.suo
+
+# Per-machine runtime files written next to the exe
+settings.json
+state.json

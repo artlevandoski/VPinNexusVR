@@ -1,0 +1,114 @@
+using System.Text.Json;
+
+namespace VRPLauncher;
+
+/// <summary>Key names are WPF <see cref="System.Windows.Input.Key"/> names, e.g. "LeftShift", "D1", "Return".</summary>
+public sealed class KeyBindings
+{
+    public List<string> Previous { get; set; } = ["LeftShift", "Left"];
+    public List<string> Next { get; set; } = ["RightShift", "Right"];
+    public List<string> PreviousLetter { get; set; } = ["LeftCtrl", "Up", "PageUp"];
+    public List<string> NextLetter { get; set; } = ["RightCtrl", "Down", "PageDown"];
+    public List<string> Launch { get; set; } = ["D1", "Return"];
+    public List<string> Exit { get; set; } = ["Escape"];
+}
+
+public sealed class Settings
+{
+    public string TablesFolder { get; set; } = @"I:\vPinball\VisualPinball\Tables";
+    public bool IncludeSubfolders { get; set; } = false;
+
+    public string VpxExePath { get; set; } = @"I:\vPinball\VisualPinball\VPinballX_GL64.exe";
+
+    /// <summary>{table} is replaced with the full path of the selected .vpx file.</summary>
+    public string LaunchArguments { get; set; } = "-Minimized -Play \"{table}\"";
+
+    /// <summary>Folders searched (in order) for an image named like the table.</summary>
+    public List<string> ImageFolders { get; set; } =
+    [
+        @"I:\vPinball\PinUPSystem\POPMedia\Visual Pinball X\Wheel",
+        @"I:\vPinball\VisualPinball\vpxlauncher\wheels",
+    ];
+
+    /// <summary>Use the backglass image inside a matching .directb2s file when one exists.</summary>
+    public bool UseDirectB2SImages { get; set; } = true;
+
+    public bool Fullscreen { get; set; } = true;
+    public bool MinimizeWhileRunning { get; set; } = true;
+
+    /// <summary>Input is ignored this long after VPX exits, so the key that quit VPX doesn't act here.</summary>
+    public int InputCooldownMs { get; set; } = 1500;
+
+    /// <summary>How long an Exit key must be held to quit the launcher. 0 quits on press.</summary>
+    public int ExitHoldMs { get; set; } = 1500;
+
+    public KeyBindings Keys { get; set; } = new();
+
+    static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        WriteIndented = true,
+        ReadCommentHandling = JsonCommentHandling.Skip,
+        AllowTrailingCommas = true,
+    };
+
+    /// <summary>Loads the settings file, writing a default one first if it doesn't exist.</summary>
+    public static Settings LoadOrCreate(string path, out string? error)
+    {
+        error = null;
+        if (!File.Exists(path))
+        {
+            var defaults = new Settings();
+            try
+            {
+                File.WriteAllText(path, JsonSerializer.Serialize(defaults, JsonOptions));
+            }
+            catch (Exception ex)
+            {
+                error = $"Could not write {path}: {ex.Message}";
+            }
+            return defaults;
+        }
+
+        try
+        {
+            return JsonSerializer.Deserialize<Settings>(File.ReadAllText(path), JsonOptions) ?? new Settings();
+        }
+        catch (Exception ex)
+        {
+            error = $"settings.json is invalid, using defaults: {ex.Message}";
+            return new Settings();
+        }
+    }
+}
+
+/// <summary>Small runtime state kept apart from settings.json so the user's file is never rewritten.</summary>
+public sealed class LauncherState
+{
+    public string? LastTable { get; set; }
+
+    public static LauncherState Load(string path)
+    {
+        try
+        {
+            if (File.Exists(path))
+                return JsonSerializer.Deserialize<LauncherState>(File.ReadAllText(path)) ?? new LauncherState();
+        }
+        catch
+        {
+            // A broken state file only loses the remembered selection.
+        }
+        return new LauncherState();
+    }
+
+    public void Save(string path)
+    {
+        try
+        {
+            File.WriteAllText(path, JsonSerializer.Serialize(this));
+        }
+        catch
+        {
+            // Not worth interrupting play over.
+        }
+    }
+}
