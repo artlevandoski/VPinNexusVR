@@ -11,6 +11,7 @@ public sealed class KeyBindings
     public List<string> NextLetter { get; set; } = ["RightCtrl", "Down", "PageDown"];
     public List<string> Launch { get; set; } = ["D1", "Return"];
     public List<string> Exit { get; set; } = ["Escape"];
+    public List<string> Settings { get; set; } = ["F2"];
 }
 
 public sealed class Settings
@@ -50,6 +51,11 @@ public sealed class Settings
         ReadCommentHandling = JsonCommentHandling.Skip,
         AllowTrailingCommas = true,
     };
+
+    public Settings Clone() => JsonSerializer.Deserialize<Settings>(JsonSerializer.Serialize(this, JsonOptions), JsonOptions)!;
+
+    /// <summary>Writes the settings file. Any comments in the old file are not kept.</summary>
+    public void Save(string path) => File.WriteAllText(path, JsonSerializer.Serialize(this, JsonOptions));
 
     /// <summary>Loads the settings file, writing a default one first if it doesn't exist.</summary>
     public static Settings LoadOrCreate(string path, out string? error)

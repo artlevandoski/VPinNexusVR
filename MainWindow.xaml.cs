@@ -15,13 +15,14 @@ public partial class MainWindow : Window
     static readonly Brush SelectedBorder = Freeze(new SolidColorBrush(Color.FromRgb(0xFF, 0xD4, 0x00)));
     static readonly Brush SlotBackground = Freeze(new SolidColorBrush(Color.FromRgb(0x14, 0x14, 0x14)));
 
+    readonly string _settingsPath;
     readonly string _statePath;
-    readonly Settings _settings;
     readonly LauncherState _state;
-    readonly KeyMap _keys;
-    readonly ThumbnailFinder _thumbnails;
-    readonly List<TableEntry> _tables;
     readonly List<Slot> _slots = [];
+    Settings _settings;
+    KeyMap _keys = null!;
+    ThumbnailFinder _thumbnails = null!;
+    List<TableEntry> _tables = [];
     readonly DispatcherTimer _exitTimer;
     readonly DispatcherTimer _refocusTimer;
 
@@ -36,37 +37,13 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
 
+        _settingsPath = settingsPath;
         _statePath = Path.Combine(Path.GetDirectoryName(settingsPath)!, "state.json");
         _settings = Settings.LoadOrCreate(settingsPath, out var settingsError);
         _state = LauncherState.Load(_statePath);
-        _keys = new KeyMap(_settings.Keys);
-        _thumbnails = new ThumbnailFinder(_settings);
-        _tables = TableScanner.Scan(_settings, out var scanError);
-
-        if (_settings.Fullscreen)
-        {
-            WindowStyle = WindowStyle.None;
-            ResizeMode = ResizeMode.NoResize;
-            WindowState = WindowState.Maximized;
-            Cursor = Cursors.None;
-        }
 
         CreateSlots();
-        HelpText.Text =
-            $"{_keys.Describe(LauncherAction.Previous)} / {_keys.Describe(LauncherAction.Next)}: browse     " +
-            $"{_keys.Describe(LauncherAction.PreviousLetter)} / {_keys.Describe(LauncherAction.NextLetter)}: jump letter     " +
-            $"{_keys.Describe(LauncherAction.Launch)}: play     " +
-            $"hold {_keys.Describe(LauncherAction.Exit)}: quit";
-
-        var errors = new List<string>();
-        if (settingsError != null) errors.Add(settingsError);
-        if (scanError != null) errors.Add(scanError);
-        else if (_tables.Count == 0) errors.Add($"No .vpx tables found in {_settings.TablesFolder}");
-        if (_keys.InvalidNames.Count > 0) errors.Add("Unknown key names in settings.json: " + string.Join(", ", _keys.InvalidNames));
-        if (errors.Count > 0) ShowStatus(string.Join("\n", errors));
-
-        _index = Math.Max(0, _tables.FindIndex(t => t.FilePath.Equals(_state.LastTable, StringComparison.OrdinalIgnoreCase)));
-        UpdateView();
+        ApplySettings(settingsError);
 
         _exitTimer = new DispatcherTimer(TimeSpan.FromMilliseconds(30), DispatcherPriority.Normal, OnExitTimer, Dispatcher);
         _exitTimer.Stop();
@@ -76,7 +53,78 @@ public partial class MainWindow : Window
         PreviewKeyDown += OnKeyDown;
         PreviewKeyUp += OnKeyUp;
         Deactivated += (_, _) => CancelExitHold();
-        Loaded += (_, _) => BringToFront();
+        Loaded += (_, _) =>
+        {
+            BringToFront();
+            // First run, or paths that no longer exist: go straight to setup.
+            if (!File.Exists(_settings.VpxExePath) || !Directory.Exists(_settings.TablesFolder))
+                Dispatcher.BeginInvoke(OpenSettings, DispatcherPriority.ApplicationIdle);
+        };
+    }
+
+    /// <summary>(Re)applies the current settings: window mode, key map, table list and thumbnails.</summary>
+    void ApplySettings(string? settingsError = null)
+    {
+        if (_settings.Fullscreen)
+        {
+            WindowStyle = WindowStyle.None;
+            ResizeMode = ResizeMode.NoResize;
+            WindowState = WindowState.Maximized;
+            Cursor = Cursors.None;
+        }
+        else
+        {
+            WindowStyle = WindowStyle.SingleBorderWindow;
+            ResizeMode = ResizeMode.CanResize;
+            WindowState = WindowState.Normal;
+            Cursor = null;
+        }
+
+        _keys = new KeyMap(_settings.Keys);
+        _thumbnails = new ThumbnailFinder(_settings);
+        _tables = TableScanner.Scan(_settings, out var scanError);
+
+        HelpText.Text =
+            $"{_keys.Describe(LauncherAction.Previous)} / {_keys.Describe(LauncherAction.Next)}: browse     " +
+            $"{_keys.Describe(LauncherAction.PreviousLetter)} / {_keys.Describe(LauncherAction.NextLetter)}: jump letter     " +
+            $"{_keys.Describe(LauncherAction.Launch)}: play     " +
+            $"hold {_keys.Describe(LauncherAction.Exit)}: quit     " +
+            $"{_keys.Describe(LauncherAction.Settings)}: settings";
+
+        var errors = new List<string>();
+        if (settingsError != null) errors.Add(settingsError);
+        if (scanError != null) errors.Add(scanError);
+        else if (_tables.Count == 0) errors.Add($"No .vpx tables found in {_settings.TablesFolder}");
+        if (_keys.InvalidNames.Count > 0) errors.Add("Unknown key names in settings.json: " + string.Join(", ", _keys.InvalidNames));
+        if (errors.Count > 0) ShowStatus(string.Join("\n", errors));
+        else HideStatus();
+
+        _index = Math.Max(0, _tables.FindIndex(t => t.FilePath.Equals(_state.LastTable, StringComparison.OrdinalIgnoreCase)));
+        UpdateView();
+    }
+
+    void OpenSettings()
+    {
+        if (_running || OwnedWindows.Count > 0) return;
+        CancelExitHold();
+        _refocusTimer.Stop(); // it would pull focus away from the dialog
+        var dialog = new SettingsWindow(_settings.Clone()) { Owner = this };
+        if (dialog.ShowDialog() == true)
+        {
+            string? saveError = null;
+            try
+            {
+                dialog.Result.Save(_settingsPath);
+            }
+            catch (Exception ex)
+            {
+                saveError = $"Could not save {_settingsPath}: {ex.Message}";
+            }
+            _settings = dialog.Result;
+            ApplySettings(saveError);
+        }
+        _ignoreInputUntil = DateTime.UtcNow.AddMilliseconds(300);
+        BringToFront();
     }
 
     // ---------- View ----------
@@ -204,6 +252,7 @@ public partial class MainWindow : Window
             case LauncherAction.NextLetter: JumpLetter(1); break;
             case LauncherAction.Launch when !e.IsRepeat: Launch(); break;
             case LauncherAction.Exit when !e.IsRepeat: StartExitHold(key); break;
+            case LauncherAction.Settings when !e.IsRepeat: OpenSettings(); break;
         }
     }
 
