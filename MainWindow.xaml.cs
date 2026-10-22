@@ -11,22 +11,39 @@ namespace VRPLauncher;
 public partial class MainWindow : Window
 {
     sealed record Slot(int Offset, Border Border, Image Image, TextBlock Placeholder);
+    sealed record TableFilter(string Name, Func<TableEntry, bool> Matches);
+    enum ViewerMode { Closed, Playfield, Backglass }
+
+    const int ViewerDecodeHeight = 1000;
 
     static readonly Brush SelectedBorder = Freeze(new SolidColorBrush(Color.FromRgb(0xFF, 0xD4, 0x00)));
     static readonly Brush SlotBackground = Freeze(new SolidColorBrush(Color.FromRgb(0x14, 0x14, 0x14)));
 
     readonly string _settingsPath;
     readonly string _statePath;
+    readonly string _vpsCacheDir;
     readonly LauncherState _state;
     readonly List<Slot> _slots = [];
+    readonly DispatcherTimer _exitTimer;
+    readonly DispatcherTimer _refocusTimer;
     Settings _settings;
     KeyMap _keys = null!;
     ThumbnailFinder _thumbnails = null!;
-    List<TableEntry> _tables = [];
-    readonly DispatcherTimer _exitTimer;
-    readonly DispatcherTimer _refocusTimer;
+    VpsClient? _vps;
+    VpsIndex? _vpsIndex;
+    bool _vpsLoading;
 
+    /// <summary>Every table found on disk.</summary>
+    List<TableEntry> _allTables = [];
+
+    /// <summary>The tables the current filter lets through; this is what the carousel browses.</summary>
+    List<TableEntry> _tables = [];
+
+    List<TableFilter> _filters = [];
+    int _filterIndex;
     int _index;
+    ViewerMode _viewer;
+    int _viewerRequest;
     bool _running;
     DateTime _ignoreInputUntil = DateTime.MinValue;
     Key? _exitKey;
@@ -38,7 +55,9 @@ public partial class MainWindow : Window
         InitializeComponent();
 
         _settingsPath = settingsPath;
-        _statePath = Path.Combine(Path.GetDirectoryName(settingsPath)!, "state.json");
+        var dataDir = Path.GetDirectoryName(settingsPath)!;
+        _statePath = Path.Combine(dataDir, "state.json");
+        _vpsCacheDir = Path.Combine(dataDir, "vps");
         _settings = Settings.LoadOrCreate(settingsPath, out var settingsError);
         _state = LauncherState.Load(_statePath);
 
@@ -81,26 +100,34 @@ public partial class MainWindow : Window
         }
 
         _keys = new KeyMap(_settings.Keys);
-        _thumbnails = new ThumbnailFinder(_settings);
-        _tables = TableScanner.Scan(_settings, out var scanError);
+        _vps = _settings.UseVps ? new VpsClient(_vpsCacheDir) : null;
+        _thumbnails = new ThumbnailFinder(_settings, _vps);
+        _allTables = TableScanner.Scan(_settings, out var scanError);
 
         HelpText.Text =
-            $"{_keys.Describe(LauncherAction.Previous)} / {_keys.Describe(LauncherAction.Next)}: browse     " +
-            $"{_keys.Describe(LauncherAction.PreviousLetter)} / {_keys.Describe(LauncherAction.NextLetter)}: jump letter     " +
-            $"{_keys.Describe(LauncherAction.Launch)}: play     " +
-            $"hold {_keys.Describe(LauncherAction.Exit)}: quit     " +
+            $"{_keys.Describe(LauncherAction.Previous)} / {_keys.Describe(LauncherAction.Next)}: browse    " +
+            $"{_keys.Describe(LauncherAction.PreviousLetter)} / {_keys.Describe(LauncherAction.NextLetter)}: letter    " +
+            $"{_keys.Describe(LauncherAction.Launch)}: play    " +
+            (_vps != null ? $"{_keys.Describe(LauncherAction.View)}: pictures    " : "") +
+            $"{_keys.Describe(LauncherAction.NextFilter)}: filter    " +
+            $"hold {_keys.Describe(LauncherAction.Exit)}: quit    " +
             $"{_keys.Describe(LauncherAction.Settings)}: settings";
 
         var errors = new List<string>();
         if (settingsError != null) errors.Add(settingsError);
         if (scanError != null) errors.Add(scanError);
-        else if (_tables.Count == 0) errors.Add($"No .vpx tables found in {_settings.TablesFolder}");
+        else if (_allTables.Count == 0) errors.Add($"No .vpx tables found in {_settings.TablesFolder}");
         if (_keys.InvalidNames.Count > 0) errors.Add("Unknown key names in settings.json: " + string.Join(", ", _keys.InvalidNames));
         if (errors.Count > 0) ShowStatus(string.Join("\n", errors));
         else HideStatus();
 
-        _index = Math.Max(0, _tables.FindIndex(t => t.FilePath.Equals(_state.LastTable, StringComparison.OrdinalIgnoreCase)));
-        UpdateView();
+        if (_vps != null && _vpsIndex != null)
+            MatchVps();
+        BuildFilters();
+        ApplyFilter(_state.LastTable);
+
+        if (_vps != null && _vpsIndex == null)
+            _ = LoadVpsAsync();
     }
 
     void OpenSettings()
@@ -125,6 +152,110 @@ public partial class MainWindow : Window
         }
         _ignoreInputUntil = DateTime.UtcNow.AddMilliseconds(300);
         BringToFront();
+    }
+
+    // ---------- Virtual Pinball Spreadsheet ----------
+
+    /// <summary>Uses the cached database straight away, then checks VPS for a newer one in the background.</summary>
+    async Task LoadVpsAsync()
+    {
+        if (_vpsLoading || _vps == null) return;
+        _vpsLoading = true;
+        var client = _vps;
+        try
+        {
+            if (await Task.Run(client.LoadCached) is { } cached)
+                await UseVpsDatabase(cached);
+            try
+            {
+                if (await Task.Run(client.RefreshAsync) is { } fresh)
+                    await UseVpsDatabase(fresh);
+            }
+            catch (Exception ex)
+            {
+                if (_vpsIndex == null)
+                    ShowStatus($"Could not download the VPS database: {ex.Message}");
+            }
+        }
+        finally
+        {
+            _vpsLoading = false;
+        }
+    }
+
+    async Task UseVpsDatabase(List<VpsGame> games)
+    {
+        _vpsIndex = await Task.Run(() => new VpsIndex(games));
+        if (_vps == null) return; // VPS was switched off while loading
+        MatchVps();
+        BuildFilters();
+        ApplyFilter(null);
+    }
+
+    void MatchVps()
+    {
+        foreach (var table in _allTables)
+        {
+            table.Vps = _vpsIndex?.Match(table);
+            // Tables that had no local picture may get a VPS backglass now.
+            if (table.Image == null)
+                table.ImageRequested = false;
+        }
+    }
+
+    static string? DescribeType(string? type) => type switch
+    {
+        "EM" => "Electro-mechanical",
+        "SS" => "Solid state",
+        "PM" => "Pure mechanical",
+        _ => type,
+    };
+
+    // ---------- Filters ----------
+
+    /// <summary>All tables, VPS updates, machine type, decade, then each manufacturer with at least 3 tables.</summary>
+    void BuildFilters()
+    {
+        var current = _filters.Count > 0 ? _filters[_filterIndex].Name : null;
+        var filters = new List<TableFilter> { new("All tables", _ => true) };
+
+        if (_allTables.Any(t => t.Vps?.UpdateVersion != null))
+            filters.Add(new("Updates on VPS", t => t.Vps?.UpdateVersion != null));
+
+        foreach (var type in new[] { "EM", "SS", "PM" })
+            if (_allTables.Any(t => t.Type == type))
+                filters.Add(new(DescribeType(type)!, t => t.Type == type));
+
+        foreach (var decade in _allTables.Where(t => t.DisplayYear != null).Select(t => t.DisplayYear!.Value / 10 * 10).Distinct().Order())
+            filters.Add(new($"{decade}s", t => t.DisplayYear / 10 * 10 == decade));
+
+        foreach (var maker in _allTables
+                     .Where(t => !string.IsNullOrWhiteSpace(t.DisplayManufacturer))
+                     .GroupBy(t => t.DisplayManufacturer!, StringComparer.OrdinalIgnoreCase)
+                     .Where(g => g.Count() >= 3)
+                     .Select(g => g.Key)
+                     .Order(StringComparer.OrdinalIgnoreCase))
+            filters.Add(new(maker, t => string.Equals(t.DisplayManufacturer, maker, StringComparison.OrdinalIgnoreCase)));
+
+        _filters = filters;
+        _filterIndex = Math.Max(0, filters.FindIndex(f => f.Name == current));
+    }
+
+    /// <summary>Rebuilds the browsed list from the current filter, keeping the given (or current) table selected if it is still in it.</summary>
+    void ApplyFilter(string? selectPath)
+    {
+        selectPath ??= _tables.Count > 0 ? _tables[_index].FilePath : null;
+        _tables = _allTables.Where(_filters[_filterIndex].Matches).ToList();
+        _index = Math.Max(0, _tables.FindIndex(t => t.FilePath.Equals(selectPath, StringComparison.OrdinalIgnoreCase)));
+        UpdateView();
+    }
+
+    void ChangeFilter(int delta)
+    {
+        if (_filters.Count < 2) return;
+        _filterIndex = Mod(_filterIndex + delta, _filters.Count);
+        HideStatus();
+        ApplyFilter(null);
     }
 
     // ---------- View ----------
@@ -152,7 +283,7 @@ public partial class MainWindow : Window
                 CornerRadius = new CornerRadius(16),
                 BorderBrush = SelectedBorder,
                 BorderThickness = new Thickness(distance == 0 ? 8 : 0),
-                Margin = distance switch { 0 => new Thickness(16, 10, 16, 10), 1 => new Thickness(12, 90, 12, 90), _ => new Thickness(10, 160, 10, 160) },
+                Margin = distance switch { 0 => new Thickness(16, 10, 16, 10), 1 => new Thickness(12, 80, 12, 80), _ => new Thickness(10, 140, 10, 140) },
                 Opacity = distance switch { 0 => 1.0, 1 => 0.5, _ => 0.25 },
                 Child = new Grid { Children = { placeholder, image } },
             };
@@ -164,19 +295,26 @@ public partial class MainWindow : Window
 
     void UpdateView()
     {
+        FilterText.Text = _filterIndex == 0 ? "VR PINBALL" : _filters[_filterIndex].Name.ToUpperInvariant();
+
         if (_tables.Count == 0)
         {
             foreach (var slot in _slots) slot.Border.Visibility = Visibility.Hidden;
             TitleText.Text = "No tables";
-            DetailsText.Text = _settings.TablesFolder;
+            InfoText.Text = _settings.TablesFolder;
+            UpdatePanel.Visibility = Visibility.Collapsed;
             CounterText.Text = "";
             LetterText.Text = "";
+            _viewer = ViewerMode.Closed;
+            UpdateViewer();
             return;
         }
 
         var current = _tables[_index];
         TitleText.Text = current.Title;
-        DetailsText.Text = current.Details;
+        InfoText.Text = DescribeGame(current);
+        UpdatePanel.Visibility = current.Vps?.UpdateVersion != null ? Visibility.Visible : Visibility.Collapsed;
+        UpdateText.Text = $"Newer version on VPS: {current.Vps?.UpdateVersion}";
         CounterText.Text = $"{_index + 1} / {_tables.Count}";
         LetterText.Text = current.Group.ToString();
 
@@ -202,6 +340,23 @@ public partial class MainWindow : Window
             RequestImage(TableAt(offset));
             RequestImage(TableAt(-offset));
         }
+
+        UpdateViewer();
+    }
+
+    /// <summary>"Williams · 1985 · Solid state" from VPS, or maker and year from the file name.</summary>
+    static string DescribeGame(TableEntry table)
+    {
+        if (table.Vps?.Game is not { } game)
+            return string.Join("  ·  ", new[] { table.Manufacturer, table.Year?.ToString() }.Where(s => !string.IsNullOrEmpty(s)));
+
+        var parts = new List<string?>
+        {
+            game.Manufacturer,
+            game.Year?.ToString(),
+            DescribeType(game.Type),
+        };
+        return string.Join("  ·  ", parts.Where(s => !string.IsNullOrEmpty(s)));
     }
 
     TableEntry TableAt(int offset) => _tables[Mod(_index + offset, _tables.Count)];
@@ -210,7 +365,8 @@ public partial class MainWindow : Window
     {
         if (table.ImageRequested) return;
         table.ImageRequested = true;
-        Task.Run(() => _thumbnails.Load(table)).ContinueWith(task =>
+        var thumbnails = _thumbnails;
+        Task.Run(() => thumbnails.Load(table)).ContinueWith(task =>
         {
             table.Image = task.Result;
             if (table.Image == null) return;
@@ -229,6 +385,64 @@ public partial class MainWindow : Window
     }
 
     void HideStatus() => StatusPanel.Visibility = Visibility.Collapsed;
+
+    // ---------- Playfield / backglass viewer ----------
+
+    void CycleViewer()
+    {
+        if (_vps == null || _tables.Count == 0) return;
+        _viewer = _viewer switch
+        {
+            ViewerMode.Closed => ViewerMode.Playfield,
+            ViewerMode.Playfield => ViewerMode.Backglass,
+            _ => ViewerMode.Closed,
+        };
+        UpdateViewer();
+    }
+
+    void CloseViewer()
+    {
+        _viewer = ViewerMode.Closed;
+        UpdateViewer();
+    }
+
+    /// <summary>Shows the current table's playfield or backglass, loading it (from disk or VPS) in the background.</summary>
+    void UpdateViewer()
+    {
+        var request = ++_viewerRequest;
+        if (_viewer == ViewerMode.Closed || _tables.Count == 0)
+        {
+            ViewerPanel.Visibility = Visibility.Collapsed;
+            ViewerImage.Source = null;
+            return;
+        }
+
+        var table = _tables[_index];
+        var mode = _viewer;
+        var label = mode == ViewerMode.Playfield ? "PLAYFIELD" : "BACKGLASS";
+        ViewerPanel.Visibility = Visibility.Visible;
+        ViewerCaption.Text = $"{label}  ·  {table.Title}";
+        ViewerHint.Text =
+            $"{_keys.Describe(LauncherAction.View)}: {(mode == ViewerMode.Playfield ? "backglass" : "close")}    " +
+            $"{_keys.Describe(LauncherAction.Previous)} / {_keys.Describe(LauncherAction.Next)}: browse    " +
+            $"{_keys.Describe(LauncherAction.Launch)}: play    " +
+            $"{_keys.Describe(LauncherAction.Exit)}: close";
+        ViewerImage.Source = null;
+        ViewerMessage.Text = "Loading…";
+
+        var thumbnails = _thumbnails;
+        Task.Run(() => mode == ViewerMode.Playfield
+                ? thumbnails.LoadVpsImage(table.Vps?.PlayfieldUrl, ViewerDecodeHeight)
+                : thumbnails.LoadBackglass(table, ViewerDecodeHeight))
+            .ContinueWith(task =>
+            {
+                if (request != _viewerRequest) return; // the user has moved on
+                ViewerImage.Source = task.Result;
+                ViewerMessage.Text = task.Result != null ? ""
+                    : table.Vps == null ? "This table wasn't found on VPS"
+                    : $"No {label.ToLowerInvariant()} image on VPS";
+            }, TaskScheduler.FromCurrentSynchronizationContext());
+    }
 
     // ---------- Input ----------
 
@@ -250,7 +464,12 @@ public partial class MainWindow : Window
             case LauncherAction.Next: Move(1); break;
             case LauncherAction.PreviousLetter: JumpLetter(-1); break;
             case LauncherAction.NextLetter: JumpLetter(1); break;
+            case LauncherAction.NextFilter when !e.IsRepeat: ChangeFilter(1); break;
+            case LauncherAction.PreviousFilter when !e.IsRepeat: ChangeFilter(-1); break;
+            case LauncherAction.View when !e.IsRepeat: CycleViewer(); break;
             case LauncherAction.Launch when !e.IsRepeat: Launch(); break;
+            // In the viewer, Exit just closes the viewer.
+            case LauncherAction.Exit when !e.IsRepeat && _viewer != ViewerMode.Closed: CloseViewer(); break;
             case LauncherAction.Exit when !e.IsRepeat: StartExitHold(key); break;
             case LauncherAction.Settings when !e.IsRepeat: OpenSettings(); break;
         }
@@ -342,7 +561,7 @@ public partial class MainWindow : Window
 
         if (!File.Exists(_settings.VpxExePath))
         {
-            ShowStatus($"VPX not found: {_settings.VpxExePath}\nSet VpxExePath in settings.json");
+            ShowStatus($"VPX not found: {_settings.VpxExePath}\nPress {_keys.Describe(LauncherAction.Settings)} to set it");
             return;
         }
 
@@ -373,6 +592,7 @@ public partial class MainWindow : Window
 
         _running = true;
         CancelExitHold();
+        CloseViewer();
         HideStatus();
         PlayingText.Text = table.Title;
         PlayingPanel.Visibility = Visibility.Visible;

@@ -13,17 +13,19 @@
             <Grid.RowDefinitions>
                 <RowDefinition Height="100" />
                 <RowDefinition Height="*" />
-                <RowDefinition Height="250" />
-                <RowDefinition Height="90" />
+                <RowDefinition Height="220" />
+                <RowDefinition Height="80" />
             </Grid.RowDefinitions>
 
-            <!-- Header -->
-            <TextBlock Grid.Row="0" Margin="50,0" VerticalAlignment="Center"
+            <!-- Header: filter name, current letter, last key and position -->
+            <TextBlock x:Name="FilterText" Grid.Row="0" Margin="50,0" VerticalAlignment="Center"
                        Text="VR PINBALL" FontSize="46" FontWeight="Black" Foreground="#FFD400" />
             <TextBlock x:Name="LetterText" Grid.Row="0" HorizontalAlignment="Center" VerticalAlignment="Center"
                        FontSize="64" FontWeight="Black" Foreground="#FFD400" />
-            <TextBlock x:Name="CounterText" Grid.Row="0" Margin="50,0" HorizontalAlignment="Right" VerticalAlignment="Center"
-                       FontSize="46" FontWeight="Bold" Foreground="White" />
+            <StackPanel Grid.Row="0" Margin="50,0" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                <TextBlock x:Name="LastKeyText" VerticalAlignment="Center" Margin="0,0,40,0" FontSize="24" Foreground="#808080" />
+                <TextBlock x:Name="CounterText" VerticalAlignment="Center" FontSize="46" FontWeight="Bold" Foreground="White" />
+            </StackPanel>
 
             <!-- Carousel: the selected table in the middle, two neighbours on each side. Slots are created in code. -->
             <Grid x:Name="Carousel" Grid.Row="1" Margin="20,0">
@@ -36,21 +38,22 @@
                 </Grid.ColumnDefinitions>
             </Grid>
 
-            <!-- Selected table title -->
+            <!-- Selected table: title, VPS game info and update notice -->
             <StackPanel Grid.Row="2" VerticalAlignment="Center" Margin="60,0">
                 <TextBlock x:Name="TitleText" HorizontalAlignment="Center" TextTrimming="CharacterEllipsis"
-                           FontSize="84" FontWeight="Bold" Foreground="White" />
-                <TextBlock x:Name="DetailsText" HorizontalAlignment="Center" TextTrimming="CharacterEllipsis"
-                           FontSize="44" Foreground="#C8C8C8" Margin="0,6,0,0" />
+                           FontSize="58" FontWeight="Bold" Foreground="White" />
+                <TextBlock x:Name="InfoText" HorizontalAlignment="Center" TextTrimming="CharacterEllipsis"
+                           FontSize="26" Foreground="#8FC8FF" Margin="0,6,0,0" />
+                <Border x:Name="UpdatePanel" HorizontalAlignment="Center" Margin="0,10,0,0" Padding="16,3"
+                        CornerRadius="8" Background="#1E7A34" Visibility="Collapsed">
+                    <TextBlock x:Name="UpdateText" FontSize="24" FontWeight="SemiBold" Foreground="White" />
+                </Border>
             </StackPanel>
 
-            <!-- Footer: controls help and the last key pressed (handy for checking what the stub sends) -->
+            <!-- Footer: controls help -->
             <Border Grid.Row="3" Background="#1A1A1A">
-                <Grid Margin="50,0">
-                    <TextBlock x:Name="HelpText" VerticalAlignment="Center" FontSize="34" Foreground="#E0E0E0" />
-                    <TextBlock x:Name="LastKeyText" HorizontalAlignment="Right" VerticalAlignment="Center"
-                               FontSize="28" Foreground="#909090" />
-                </Grid>
+                <TextBlock x:Name="HelpText" Margin="40,0" HorizontalAlignment="Center" VerticalAlignment="Center"
+                           FontSize="29" Foreground="#E0E0E0" />
             </Border>
 
             <!-- Errors and notices -->
@@ -58,6 +61,23 @@
                     Background="#B00020" CornerRadius="10" Padding="30,12" Visibility="Collapsed">
                 <TextBlock x:Name="StatusText" FontSize="36" FontWeight="SemiBold" Foreground="White" TextWrapping="Wrap" MaxWidth="1700" />
             </Border>
+
+            <!-- Playfield / backglass viewer -->
+            <Grid x:Name="ViewerPanel" Grid.RowSpan="4" Background="Black" Visibility="Collapsed">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="100" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="80" />
+                </Grid.RowDefinitions>
+                <TextBlock x:Name="ViewerCaption" Grid.Row="0" HorizontalAlignment="Center" VerticalAlignment="Center"
+                           TextTrimming="CharacterEllipsis" MaxWidth="1800"
+                           FontSize="48" FontWeight="Bold" Foreground="#FFD400" />
+                <Image x:Name="ViewerImage" Grid.Row="1" Stretch="Uniform" Margin="40,0" RenderOptions.BitmapScalingMode="HighQuality" />
+                <TextBlock x:Name="ViewerMessage" Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center"
+                           FontSize="48" Foreground="#C8C8C8" />
+                <TextBlock x:Name="ViewerHint" Grid.Row="2" HorizontalAlignment="Center" VerticalAlignment="Center"
+                           FontSize="29" Foreground="#E0E0E0" />
+            </Grid>
 
             <!-- Hold-to-exit feedback -->
             <Border x:Name="ExitPanel" Grid.RowSpan="4" HorizontalAlignment="Center" VerticalAlignment="Center"

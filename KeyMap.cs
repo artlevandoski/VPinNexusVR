@@ -2,7 +2,7 @@ using System.Windows.Input;
 
 namespace VRPLauncher;
 
-public enum LauncherAction { Previous, Next, PreviousLetter, NextLetter, Launch, Exit, Settings }
+public enum LauncherAction { Previous, Next, PreviousLetter, NextLetter, Launch, Exit, Settings, View, NextFilter, PreviousFilter }
 
 public sealed class KeyMap
 {
@@ -20,6 +20,9 @@ public sealed class KeyMap
         Add(LauncherAction.Launch, bindings.Launch);
         Add(LauncherAction.Exit, bindings.Exit);
         Add(LauncherAction.Settings, bindings.Settings);
+        Add(LauncherAction.View, bindings.View);
+        Add(LauncherAction.NextFilter, bindings.NextFilter);
+        Add(LauncherAction.PreviousFilter, bindings.PreviousFilter);
     }
 
     public bool TryGet(Key key, out LauncherAction action) => _map.TryGetValue(key, out action);

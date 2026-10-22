@@ -12,6 +12,9 @@ public sealed class KeyBindings
     public List<string> Launch { get; set; } = ["D1", "Return"];
     public List<string> Exit { get; set; } = ["Escape"];
     public List<string> Settings { get; set; } = ["F2"];
+    public List<string> View { get; set; } = ["D5", "V"];
+    public List<string> NextFilter { get; set; } = ["D2", "F"];
+    public List<string> PreviousFilter { get; set; } = ["G"];
 }
 
 public sealed class Settings
@@ -33,6 +36,9 @@ public sealed class Settings
 
     /// <summary>Use the backglass image inside a matching .directb2s file when one exists.</summary>
     public bool UseDirectB2SImages { get; set; } = true;
+
+    /// <summary>Use the Virtual Pinball Spreadsheet database for game info, images, filters and update checks.</summary>
+    public bool UseVps { get; set; } = true;
 
     public bool Fullscreen { get; set; } = true;
     public bool MinimizeWhileRunning { get; set; } = true;

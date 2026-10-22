@@ -30,6 +30,7 @@ public partial class SettingsWindow : Window
         _imageFolders.CollectionChanged += (_, _) => UpdateStatus();
         DirectB2SBox.IsChecked = settings.UseDirectB2SImages;
         FullscreenBox.IsChecked = settings.Fullscreen;
+        VpsBox.IsChecked = settings.UseVps;
 
         UpdateStatus();
     }
@@ -136,6 +137,7 @@ public partial class SettingsWindow : Window
         Result.ImageFolders = [.. _imageFolders];
         Result.UseDirectB2SImages = DirectB2SBox.IsChecked == true;
         Result.Fullscreen = FullscreenBox.IsChecked == true;
+        Result.UseVps = VpsBox.IsChecked == true;
         DialogResult = true;
     }
 }

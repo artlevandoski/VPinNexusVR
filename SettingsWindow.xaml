@@ -73,6 +73,9 @@
         <TextBlock x:Name="ImagesStatus" Style="{StaticResource Hint}" />
         <CheckBox x:Name="DirectB2SBox" Content="Use the backglass image from a matching .directb2s file" />
 
+        <TextBlock Style="{StaticResource Heading}" Text="Virtual Pinball Spreadsheet" />
+        <CheckBox x:Name="VpsBox" Content="Use VPS data: game info, playfield/backglass images, filters, update check" />
+
         <TextBlock Style="{StaticResource Heading}" Text="Display" />
         <CheckBox x:Name="FullscreenBox" Content="Fullscreen (hides the mouse pointer)" />
 

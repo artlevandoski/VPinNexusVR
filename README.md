@@ -4,7 +4,8 @@ A 2D, keyboard-only front end for picking and launching Visual Pinball X tables 
 It is built to be driven entirely from a VR pinball stub's buttons and to read well on the desktop view mirrored into the headset.
 
 - Scans a tables folder for `.vpx` files and shows them in a big carousel.
-- Thumbnails, in order: an image next to the `.vpx` with the same name, the backglass inside a same-named `.directb2s`, then images in the configured image folders (PinUP wheel images by default).
+- Thumbnails, in order: an image next to the `.vpx` with the same name, wheel art from the configured image folders (PinUP wheel images by default), the backglass inside a same-named `.directb2s`, then the VPS backglass.
+- Uses the [Virtual Pinball Spreadsheet](https://virtualpinballspreadsheet.github.io/) database for game info, playfield/backglass pictures, filters and "newer version available" notices.
 - Launches VPX with configurable arguments, then brings itself back to the foreground when VPX exits.
 - Remembers the last table you played.
 
@@ -26,7 +27,23 @@ This writes `publish\VRPLauncher.exe`. Run it from anywhere; on first run it cre
 | Jump to previous / next letter | Left Ctrl / Right Ctrl, arrow Up / Down, PageUp / PageDown | Magna-save |
 | Play | 1, Enter | Start, plunger |
 | Quit the launcher | hold Esc for 1.5 s | Exit |
+| Show playfield, then backglass, then close | 5, V | Coin |
+| Next / previous filter | 2, F / G | Extra ball (2) |
 | Open settings | F2 | (keyboard) |
+
+## Virtual Pinball Spreadsheet (VPS)
+
+At startup the launcher loads its cached copy of `vpsdb.json` and then checks `lastUpdated.json` on VPS in the background. It only downloads the 8 MB database again when that stamp has changed.
+The cache is kept in a `vps` folder next to `settings.json`, with downloaded pictures in `vps\img`. If VPS can't be reached, the cached copy is used.
+
+Each table is matched to a VPS game by the "Name (Maker Year)" part of its file name. A few loosely named files are matched by year and a partial name.
+
+- **Game info:** manufacturer, year, type, players, theme and designers are shown under the selected table.
+- **Pictures:** wheel art stays the main picture. Press **5** to see the VPS playfield, **5** again for the backglass (a local `.directb2s` is preferred), and **5** again to close. The flippers browse tables while the pictures are open, and Esc closes them.
+- **Updates:** if VPS lists a newer VPX release whose *main* author appears in your file name (for example "VPW" or "RobbyKingPin"), a green "Newer version on VPS" badge is shown. Releases where your author is only a contributor are ignored. Some newer releases need a newer VPX than 10.7, so check the release notes before updating.
+- **Filters:** **2** cycles through All tables, Updates on VPS, Electro-mechanical / Solid state, decades, and every manufacturer with at least 3 tables. The current filter is shown at the top left.
+
+Untick "Use VPS data" in the settings window to turn all of this off.
 
 ## Settings window
 
@@ -34,7 +51,7 @@ Press **F2** to set the VPX exe, launch arguments, tables folder and wheel/image
 It also opens by itself at startup if the VPX exe or tables folder can't be found.
 Saving rewrites `settings.json`, so any comments you added to that file are removed. Key bindings and timings can only be changed in the file.
 
-The footer shows the name of the last key pressed, which is the name to put in `settings.json` if you want to rebind a button.
+The top right shows the name of the last key pressed, which is the name to put in `settings.json` if you want to rebind a button.
 
 Quitting needs a hold so that the Esc press that closes VPX can't also close the launcher. Input is also ignored for a moment after VPX exits.
 
@@ -51,6 +68,7 @@ Quitting needs a hold so that the Esc press that closes VPX can't also close the
     "I:\\vPinball\\VisualPinball\\vpxlauncher\\wheels"
   ],
   "UseDirectB2SImages": true,
+  "UseVps": true,
   "Fullscreen": true,
   "MinimizeWhileRunning": true,
   "InputCooldownMs": 1500,   // ignore keys this long after VPX exits
@@ -62,7 +80,10 @@ Quitting needs a hold so that the Esc press that closes VPX can't also close the
     "NextLetter": ["RightCtrl", "Down", "PageDown"],
     "Launch": ["D1", "Return"],
     "Exit": ["Escape"],
-    "Settings": ["F2"]
+    "Settings": ["F2"],
+    "View": ["D5", "V"],
+    "NextFilter": ["D2", "F"],
+    "PreviousFilter": ["G"]
   }
 }
 ```
