@@ -38,6 +38,7 @@
         </Style>
     </Window.Resources>
 
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
     <StackPanel Margin="30,12,30,24">
 
         <TextBlock Style="{StaticResource Heading}" Text="VPX executable" />
@@ -60,21 +61,52 @@
         <CheckBox x:Name="SubfoldersBox" Content="Include subfolders" Click="Field_Changed" />
         <TextBlock x:Name="TablesStatus" Style="{StaticResource Hint}" />
 
-        <TextBlock Style="{StaticResource Heading}" Text="Wheel / image folders (searched top to bottom)" />
+        <TextBlock Style="{StaticResource Heading}" Text="Wheel images" />
+        <DockPanel>
+            <Button DockPanel.Dock="Right" Content="Open" Click="OpenWheelMedia_Click" />
+            <TextBlock x:Name="WheelMediaText" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+        </DockPanel>
+        <TextBlock Style="{StaticResource Hint}"
+                   Text="Built-in folder, searched first. Add or replace a picture by saving it as &quot;Table Name (Maker Year).png&quot;." />
+        <TextBlock Text="Other wheel folders (searched top to bottom):" Margin="0,10,0,4" />
         <DockPanel>
             <StackPanel DockPanel.Dock="Right">
-                <Button Content="Add…" Click="AddImageFolder_Click" />
-                <Button Content="Remove" Click="RemoveImageFolder_Click" Margin="8,8,0,0" />
-                <Button Content="Move up" Click="MoveUp_Click" Margin="8,8,0,0" />
-                <Button Content="Move down" Click="MoveDown_Click" Margin="8,8,0,0" />
+                <Button Content="Add…" Tag="Wheels" Click="AddFolder_Click" />
+                <Button Content="Remove" Tag="Wheels" Click="RemoveFolder_Click" Margin="8,8,0,0" />
+                <Button Content="Move up" Tag="Wheels" Click="MoveUp_Click" Margin="8,8,0,0" />
             </StackPanel>
-            <ListBox x:Name="ImageFoldersList" Height="150" />
+            <ListBox x:Name="ImageFoldersList" Height="110" />
         </DockPanel>
         <TextBlock x:Name="ImagesStatus" Style="{StaticResource Hint}" />
-        <CheckBox x:Name="DirectB2SBox" Content="Use the backglass image from a matching .directb2s file" />
+        <CheckBox x:Name="DirectB2SBox" Content="If there is no wheel, use the backglass from a matching .directb2s file" />
+
+        <TextBlock Style="{StaticResource Heading}" Text="Playfield images" />
+        <DockPanel>
+            <Button DockPanel.Dock="Right" Content="Open" Click="OpenPlayfieldMedia_Click" />
+            <TextBlock x:Name="PlayfieldMediaText" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+        </DockPanel>
+        <TextBlock x:Name="PlayfieldStatus" Style="{StaticResource Hint}" />
+
+        <TextBlock Style="{StaticResource Heading}" Text="Rules cards" />
+        <DockPanel>
+            <Button DockPanel.Dock="Right" Content="Open" Click="OpenRulesMedia_Click" />
+            <TextBlock x:Name="RulesMediaText" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+        </DockPanel>
+        <TextBlock Style="{StaticResource Hint}"
+                   Text="Built-in folder, searched first. Name rules cards like the wheel images." />
+        <TextBlock Text="Other rules folders (searched top to bottom):" Margin="0,10,0,4" />
+        <DockPanel>
+            <StackPanel DockPanel.Dock="Right">
+                <Button Content="Add…" Tag="Rules" Click="AddFolder_Click" />
+                <Button Content="Remove" Tag="Rules" Click="RemoveFolder_Click" Margin="8,8,0,0" />
+                <Button Content="Move up" Tag="Rules" Click="MoveUp_Click" Margin="8,8,0,0" />
+            </StackPanel>
+            <ListBox x:Name="RulesFoldersList" Height="110" />
+        </DockPanel>
+        <TextBlock x:Name="RulesStatus" Style="{StaticResource Hint}" />
 
         <TextBlock Style="{StaticResource Heading}" Text="Virtual Pinball Spreadsheet" />
-        <CheckBox x:Name="VpsBox" Content="Use VPS data: game info, playfield/backglass images, filters, update check" />
+        <CheckBox x:Name="VpsBox" Content="Use VPS data: game info, playfield images, filters, update check" />
 
         <TextBlock Style="{StaticResource Heading}" Text="Display" />
         <CheckBox x:Name="FullscreenBox" Content="Fullscreen (hides the mouse pointer)" />
@@ -84,4 +116,5 @@
             <Button Content="Cancel" IsCancel="True" />
         </StackPanel>
     </StackPanel>
+    </ScrollViewer>
 </Window>

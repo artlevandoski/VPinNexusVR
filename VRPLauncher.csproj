@@ -15,4 +15,9 @@
     <Using Include="System.IO" />
   </ItemGroup>
 
+  <!-- Built-in fallback pictures, compiled into the exe. Loaded by name, e.g. "Defaults.rules_default.png". -->
+  <ItemGroup>
+    <EmbeddedResource Include="Assets\Defaults\*.png" LogicalName="Defaults.%(Filename)%(Extension)" />
+  </ItemGroup>
+
 </Project>

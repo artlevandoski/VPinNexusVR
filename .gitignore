@@ -8,3 +8,7 @@ publish/
 # Per-machine runtime files written next to the exe
 settings.json
 state.json
+
+# Image folders and the VPS download cache, also written next to the exe
+Media/
+vps/

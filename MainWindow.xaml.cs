@@ -12,7 +12,7 @@ public partial class MainWindow : Window
 {
     sealed record Slot(int Offset, Border Border, Image Image, TextBlock Placeholder);
     sealed record TableFilter(string Name, Func<TableEntry, bool> Matches);
-    enum ViewerMode { Closed, Playfield, Backglass }
+    enum ViewerMode { Closed, Playfield, Rules }
 
     const int ViewerDecodeHeight = 1000;
 
@@ -22,6 +22,9 @@ public partial class MainWindow : Window
     readonly string _settingsPath;
     readonly string _statePath;
     readonly string _vpsCacheDir;
+    readonly string _wheelMediaDir;
+    readonly string _playfieldMediaDir;
+    readonly string _rulesMediaDir;
     readonly LauncherState _state;
     readonly List<Slot> _slots = [];
     readonly DispatcherTimer _exitTimer;
@@ -58,6 +61,21 @@ public partial class MainWindow : Window
         var dataDir = Path.GetDirectoryName(settingsPath)!;
         _statePath = Path.Combine(dataDir, "state.json");
         _vpsCacheDir = Path.Combine(dataDir, "vps");
+
+        // Built-in image folders next to the exe: drop "Table Name (Maker Year).png" files in to add or replace pictures.
+        _wheelMediaDir = Path.Combine(dataDir, "Media", "Wheels");
+        _playfieldMediaDir = Path.Combine(dataDir, "Media", "Playfields");
+        _rulesMediaDir = Path.Combine(dataDir, "Media", "Rules");
+        try
+        {
+            Directory.CreateDirectory(_wheelMediaDir);
+            Directory.CreateDirectory(_playfieldMediaDir);
+            Directory.CreateDirectory(_rulesMediaDir);
+        }
+        catch
+        {
+            // Read-only install location: the configured folders still work.
+        }
         _settings = Settings.LoadOrCreate(settingsPath, out var settingsError);
         _state = LauncherState.Load(_statePath);
 
@@ -101,14 +119,17 @@ public partial class MainWindow : Window
 
         _keys = new KeyMap(_settings.Keys);
         _vps = _settings.UseVps ? new VpsClient(_vpsCacheDir) : null;
-        _thumbnails = new ThumbnailFinder(_settings, _vps);
+        _thumbnails = new ThumbnailFinder(_settings, _vps,
+            [_wheelMediaDir, .. _settings.ImageFolders],
+            [_playfieldMediaDir],
+            [_rulesMediaDir, .. _settings.RulesFolders]);
         _allTables = TableScanner.Scan(_settings, out var scanError);
 
         HelpText.Text =
             $"{_keys.Describe(LauncherAction.Previous)} / {_keys.Describe(LauncherAction.Next)}: browse    " +
             $"{_keys.Describe(LauncherAction.PreviousLetter)} / {_keys.Describe(LauncherAction.NextLetter)}: letter    " +
             $"{_keys.Describe(LauncherAction.Launch)}: play    " +
-            (_vps != null ? $"{_keys.Describe(LauncherAction.View)}: pictures    " : "") +
+            $"{_keys.Describe(LauncherAction.View)}: playfield/rules    " +
             $"{_keys.Describe(LauncherAction.NextFilter)}: filter    " +
             $"hold {_keys.Describe(LauncherAction.Exit)}: quit    " +
             $"{_keys.Describe(LauncherAction.Settings)}: settings";
@@ -135,7 +156,7 @@ public partial class MainWindow : Window
         if (_running || OwnedWindows.Count > 0) return;
         CancelExitHold();
         _refocusTimer.Stop(); // it would pull focus away from the dialog
-        var dialog = new SettingsWindow(_settings.Clone()) { Owner = this };
+        var dialog = new SettingsWindow(_settings.Clone(), _wheelMediaDir, _playfieldMediaDir, _rulesMediaDir) { Owner = this };
         if (dialog.ShowDialog() == true)
         {
             string? saveError = null;
@@ -386,15 +407,16 @@ public partial class MainWindow : Window
 
     void HideStatus() => StatusPanel.Visibility = Visibility.Collapsed;
 
-    // ---------- Playfield / backglass viewer ----------
+    // ---------- Playfield / rules viewer ----------
 
+    /// <summary>Closed -> playfield -> rules card -> closed.</summary>
     void CycleViewer()
     {
-        if (_vps == null || _tables.Count == 0) return;
+        if (_tables.Count == 0) return;
         _viewer = _viewer switch
         {
             ViewerMode.Closed => ViewerMode.Playfield,
-            ViewerMode.Playfield => ViewerMode.Backglass,
+            ViewerMode.Playfield => ViewerMode.Rules,
             _ => ViewerMode.Closed,
         };
         UpdateViewer();
@@ -406,7 +428,7 @@ public partial class MainWindow : Window
         UpdateViewer();
     }
 
-    /// <summary>Shows the current table's playfield or backglass, loading it (from disk or VPS) in the background.</summary>
+    /// <summary>Shows the current table's playfield (Media\Playfields, then VPS) or rules card, loading it in the background.</summary>
     void UpdateViewer()
     {
         var request = ++_viewerRequest;
@@ -419,11 +441,11 @@ public partial class MainWindow : Window
 
         var table = _tables[_index];
         var mode = _viewer;
-        var label = mode == ViewerMode.Playfield ? "PLAYFIELD" : "BACKGLASS";
+        var label = mode == ViewerMode.Playfield ? "PLAYFIELD" : "RULES";
         ViewerPanel.Visibility = Visibility.Visible;
         ViewerCaption.Text = $"{label}  ·  {table.Title}";
         ViewerHint.Text =
-            $"{_keys.Describe(LauncherAction.View)}: {(mode == ViewerMode.Playfield ? "backglass" : "close")}    " +
+            $"{_keys.Describe(LauncherAction.View)}: {(mode == ViewerMode.Playfield ? "rules" : "close")}    " +
             $"{_keys.Describe(LauncherAction.Previous)} / {_keys.Describe(LauncherAction.Next)}: browse    " +
             $"{_keys.Describe(LauncherAction.Launch)}: play    " +
             $"{_keys.Describe(LauncherAction.Exit)}: close";
@@ -432,15 +454,15 @@ public partial class MainWindow : Window
 
         var thumbnails = _thumbnails;
         Task.Run(() => mode == ViewerMode.Playfield
-                ? thumbnails.LoadVpsImage(table.Vps?.PlayfieldUrl, ViewerDecodeHeight)
-                : thumbnails.LoadBackglass(table, ViewerDecodeHeight))
+                ? thumbnails.LoadPlayfield(table, ViewerDecodeHeight)
+                : thumbnails.LoadRules(table, ViewerDecodeHeight))
             .ContinueWith(task =>
             {
                 if (request != _viewerRequest) return; // the user has moved on
                 ViewerImage.Source = task.Result;
                 ViewerMessage.Text = task.Result != null ? ""
-                    : table.Vps == null ? "This table wasn't found on VPS"
-                    : $"No {label.ToLowerInvariant()} image on VPS";
+                    : mode == ViewerMode.Rules ? $"No rules card for this table\nAdd one to Media\\Rules as \"{table.Title}.png\"\nor add _default.png there for all tables"
+                    : $"No playfield image for this table\nAdd one to Media\\Playfields as \"{table.Title}.png\"";
             }, TaskScheduler.FromCurrentSynchronizationContext());
     }
 

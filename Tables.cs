@@ -82,36 +82,72 @@ public static partial class TableScanner
 }
 
 /// <summary>
-/// Finds a picture for a table, in this order: an image beside the .vpx with the same name,
-/// the configured wheel/image folders (exact name first, then any image whose name starts with
-/// the table's "Name (Maker Year)"), the backglass inside a same-named .directb2s, then the VPS backglass.
+/// Images in a list of folders, looked up by table: exact file name first, then any image whose
+/// name starts with the table's "Name (Maker Year)". Earlier folders win.
 /// </summary>
-public sealed class ThumbnailFinder
+public sealed class ImageIndex
 {
-    static readonly string[] ImageExtensions = [".png", ".jpg", ".jpeg", ".bmp"];
-    const int DecodeHeight = 600;
+    public static readonly string[] Extensions = [".png", ".jpg", ".jpeg", ".bmp"];
 
-    readonly bool _useDirectB2S;
-    readonly VpsClient? _vps;
+    /// <summary>File name (without extension) of the picture shown when a table has none of its own.</summary>
+    public const string DefaultName = "_default";
 
-    // Normalized file stem -> image path, across all image folders, first folder wins.
+    // Normalized file stem -> image path.
     readonly Dictionary<string, string> _byStem = new();
     readonly List<KeyValuePair<string, string>> _sortedStems;
 
-    public ThumbnailFinder(Settings settings, VpsClient? vps)
+    public ImageIndex(IEnumerable<string> folders)
     {
-        _useDirectB2S = settings.UseDirectB2SImages;
-        _vps = vps;
-        foreach (var folder in settings.ImageFolders.Where(Directory.Exists))
+        foreach (var folder in folders.Where(Directory.Exists))
         {
             foreach (var file in Directory.EnumerateFiles(folder))
             {
-                if (!ImageExtensions.Contains(Path.GetExtension(file), StringComparer.OrdinalIgnoreCase))
+                if (!Extensions.Contains(Path.GetExtension(file), StringComparer.OrdinalIgnoreCase))
                     continue;
                 _byStem.TryAdd(Normalize(Path.GetFileNameWithoutExtension(file)), file);
             }
         }
         _sortedStems = _byStem.OrderBy(kv => kv.Key.Length).ToList();
+    }
+
+    public string? Find(TableEntry table)
+    {
+        if (_byStem.TryGetValue(Normalize(table.FileStem), out var exact))
+            return exact;
+        var titleKey = Normalize(table.Title);
+        return _sortedStems.FirstOrDefault(kv => kv.Key.StartsWith(titleKey, StringComparison.Ordinal)).Value;
+    }
+
+    /// <summary>The "_default" image from the first folder that has one, or null.</summary>
+    public string? FindDefault() => _byStem.GetValueOrDefault(DefaultName);
+
+    static string Normalize(string name) =>
+        string.Join(' ', name.ToLowerInvariant().Split(' ', StringSplitOptions.RemoveEmptyEntries));
+}
+
+/// <summary>
+/// Finds a picture for a table, in this order: an image beside the .vpx with the same name,
+/// the wheel folders, the backglass inside a same-named .directb2s, then the VPS backglass.
+/// Also loads playfields (local folder first, then VPS) and rules cards.
+/// </summary>
+public sealed class ThumbnailFinder
+{
+    const int DecodeHeight = 600;
+
+    readonly bool _useDirectB2S;
+    readonly VpsClient? _vps;
+    readonly ImageIndex _wheels;
+    readonly ImageIndex _playfields;
+    readonly ImageIndex _rules;
+
+    public ThumbnailFinder(Settings settings, VpsClient? vps,
+        IEnumerable<string> wheelFolders, IEnumerable<string> playfieldFolders, IEnumerable<string> rulesFolders)
+    {
+        _useDirectB2S = settings.UseDirectB2SImages;
+        _vps = vps;
+        _wheels = new ImageIndex(wheelFolders);
+        _playfields = new ImageIndex(playfieldFolders);
+        _rules = new ImageIndex(rulesFolders);
     }
 
     /// <summary>Loads a frozen image for the table, or null. Safe to call off the UI thread.</summary>
@@ -120,20 +156,15 @@ public sealed class ThumbnailFinder
         try
         {
             var dir = Path.GetDirectoryName(table.FilePath)!;
-            foreach (var ext in ImageExtensions)
+            foreach (var ext in ImageIndex.Extensions)
             {
                 var sidecar = Path.Combine(dir, table.FileStem + ext);
                 if (File.Exists(sidecar))
                     return FromFile(sidecar);
             }
 
-            if (_byStem.TryGetValue(Normalize(table.FileStem), out var exact))
-                return FromFile(exact);
-
-            var titleKey = Normalize(table.Title);
-            var prefixed = _sortedStems.FirstOrDefault(kv => kv.Key.StartsWith(titleKey, StringComparison.Ordinal));
-            if (prefixed.Value != null)
-                return FromFile(prefixed.Value);
+            if (_wheels.Find(table) is { } wheel)
+                return FromFile(wheel);
 
             return LoadBackglass(table, DecodeHeight);
         }
@@ -142,6 +173,39 @@ public sealed class ThumbnailFinder
             // A broken image just leaves the text placeholder.
         }
         return null;
+    }
+
+    /// <summary>The table's playfield: from the playfield folders if there is one, otherwise from VPS.</summary>
+    public ImageSource? LoadPlayfield(TableEntry table, int decodeHeight)
+    {
+        try
+        {
+            if (_playfields.Find(table) is { } path)
+                return FromFile(path, decodeHeight);
+            return LoadVpsImage(table.Vps?.PlayfieldUrl, decodeHeight);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// The table's rules card from the rules folders, else a "_default" image in those folders,
+    /// else the default built into the exe.
+    /// </summary>
+    public ImageSource? LoadRules(TableEntry table, int decodeHeight)
+    {
+        try
+        {
+            return (_rules.Find(table) ?? _rules.FindDefault()) is { } path
+                ? FromFile(path, decodeHeight)
+                : FromBuiltIn("rules_default.png", decodeHeight);
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     /// <summary>The table's backglass: from a same-named .directb2s if there is one, otherwise from VPS.</summary>
@@ -176,8 +240,11 @@ public sealed class ThumbnailFinder
         }
     }
 
-    static string Normalize(string name) =>
-        string.Join(' ', name.ToLowerInvariant().Split(' ', StringSplitOptions.RemoveEmptyEntries));
+    static BitmapSource? FromBuiltIn(string name, int decodeHeight)
+    {
+        using var stream = typeof(ThumbnailFinder).Assembly.GetManifestResourceStream("Defaults." + name);
+        return stream == null ? null : FromStream(stream, decodeHeight);
+    }
 
     static BitmapSource FromFile(string path, int decodeHeight = DecodeHeight)
     {

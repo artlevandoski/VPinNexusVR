@@ -62,7 +62,7 @@
                 <TextBlock x:Name="StatusText" FontSize="36" FontWeight="SemiBold" Foreground="White" TextWrapping="Wrap" MaxWidth="1700" />
             </Border>
 
-            <!-- Playfield / backglass viewer -->
+            <!-- Playfield / rules viewer -->
             <Grid x:Name="ViewerPanel" Grid.RowSpan="4" Background="Black" Visibility="Collapsed">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="100" />
@@ -74,7 +74,7 @@
                            FontSize="48" FontWeight="Bold" Foreground="#FFD400" />
                 <Image x:Name="ViewerImage" Grid.Row="1" Stretch="Uniform" Margin="40,0" RenderOptions.BitmapScalingMode="HighQuality" />
                 <TextBlock x:Name="ViewerMessage" Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center"
-                           FontSize="48" Foreground="#C8C8C8" />
+                           TextAlignment="Center" FontSize="44" Foreground="#C8C8C8" />
                 <TextBlock x:Name="ViewerHint" Grid.Row="2" HorizontalAlignment="Center" VerticalAlignment="Center"
                            FontSize="29" Foreground="#E0E0E0" />
             </Grid>

@@ -34,6 +34,9 @@ public sealed class Settings
         @"I:\vPinball\VisualPinball\vpxlauncher\wheels",
     ];
 
+    /// <summary>Folders searched (in order) for a rules card named like the table.</summary>
+    public List<string> RulesFolders { get; set; } = [];
+
     /// <summary>Use the backglass image inside a matching .directb2s file when one exists.</summary>
     public bool UseDirectB2SImages { get; set; } = true;
 
