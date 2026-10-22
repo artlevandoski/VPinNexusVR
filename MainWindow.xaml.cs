@@ -4,6 +4,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
+using System.Windows.Media.Effects;
 using System.Windows.Threading;
 
 namespace VRPLauncher;
@@ -12,18 +13,15 @@ public partial class MainWindow : Window
 {
     sealed record Slot(int Offset, Border Border, Image Image, TextBlock Placeholder);
     sealed record TableFilter(string Name, Func<TableEntry, bool> Matches);
-    enum ViewerMode { Closed, Playfield, Rules }
+    enum ViewerMode { Closed, Rules }
 
     const int ViewerDecodeHeight = 1000;
 
-    static readonly Brush SelectedBorder = Freeze(new SolidColorBrush(Color.FromRgb(0xFF, 0xD4, 0x00)));
-    static readonly Brush SlotBackground = Freeze(new SolidColorBrush(Color.FromRgb(0x14, 0x14, 0x14)));
 
     readonly string _settingsPath;
     readonly string _statePath;
     readonly string _vpsCacheDir;
     readonly string _wheelMediaDir;
-    readonly string _playfieldMediaDir;
     readonly string _rulesMediaDir;
     readonly LauncherState _state;
     readonly List<Slot> _slots = [];
@@ -64,12 +62,10 @@ public partial class MainWindow : Window
 
         // Built-in image folders next to the exe: drop "Table Name (Maker Year).png" files in to add or replace pictures.
         _wheelMediaDir = Path.Combine(dataDir, "Media", "Wheels");
-        _playfieldMediaDir = Path.Combine(dataDir, "Media", "Playfields");
         _rulesMediaDir = Path.Combine(dataDir, "Media", "Rules");
         try
         {
             Directory.CreateDirectory(_wheelMediaDir);
-            Directory.CreateDirectory(_playfieldMediaDir);
             Directory.CreateDirectory(_rulesMediaDir);
         }
         catch
@@ -121,15 +117,14 @@ public partial class MainWindow : Window
         _vps = _settings.UseVps ? new VpsClient(_vpsCacheDir) : null;
         _thumbnails = new ThumbnailFinder(_settings, _vps,
             [_wheelMediaDir, .. _settings.ImageFolders],
-            [_playfieldMediaDir],
             [_rulesMediaDir, .. _settings.RulesFolders]);
         _allTables = TableScanner.Scan(_settings, out var scanError);
 
         HelpText.Text =
-            $"{_keys.Describe(LauncherAction.Previous)} / {_keys.Describe(LauncherAction.Next)}: browse    " +
-            $"{_keys.Describe(LauncherAction.PreviousLetter)} / {_keys.Describe(LauncherAction.NextLetter)}: letter    " +
-            $"{_keys.Describe(LauncherAction.Launch)}: play    " +
-            $"{_keys.Describe(LauncherAction.View)}: playfield/rules    " +
+            "Flippers: browse    " +
+            "Magna Saves: jump letter    " +
+            $"{ButtonName(LauncherAction.Launch)}: play    " +
+            $"{ButtonName(LauncherAction.View)}: rules    " +
             $"{_keys.Describe(LauncherAction.NextFilter)}: filter    " +
             $"hold {_keys.Describe(LauncherAction.Exit)}: quit    " +
             $"{_keys.Describe(LauncherAction.Settings)}: settings";
@@ -156,7 +151,7 @@ public partial class MainWindow : Window
         if (_running || OwnedWindows.Count > 0) return;
         CancelExitHold();
         _refocusTimer.Stop(); // it would pull focus away from the dialog
-        var dialog = new SettingsWindow(_settings.Clone(), _wheelMediaDir, _playfieldMediaDir, _rulesMediaDir) { Owner = this };
+        var dialog = new SettingsWindow(_settings.Clone(), _wheelMediaDir, _rulesMediaDir) { Owner = this };
         if (dialog.ShowDialog() == true)
         {
             string? saveError = null;
@@ -291,8 +286,9 @@ public partial class MainWindow : Window
             var placeholder = new TextBlock
             {
                 FontSize = distance == 0 ? 56 : 34,
+                FontFamily = (FontFamily)FindResource("TitleFont"),
                 FontWeight = FontWeights.Bold,
-                Foreground = Brushes.White,
+                Foreground = (Brush)FindResource("SilverWhite"),
                 TextWrapping = TextWrapping.Wrap,
                 TextAlignment = TextAlignment.Center,
                 VerticalAlignment = VerticalAlignment.Center,
@@ -300,10 +296,12 @@ public partial class MainWindow : Window
             };
             var border = new Border
             {
-                Background = SlotBackground,
+                Background = (Brush)FindResource("PanelNavy"),
                 CornerRadius = new CornerRadius(16),
-                BorderBrush = SelectedBorder,
-                BorderThickness = new Thickness(distance == 0 ? 8 : 0),
+                BorderBrush = (Brush)FindResource("NexusCyan"),
+                BorderThickness = new Thickness(distance == 0 ? 6 : 0),
+                // Cyan glow around the selected table.
+                Effect = distance == 0 ? new DropShadowEffect { Color = Color.FromRgb(0x00, 0xD8, 0xFF), BlurRadius = 40, ShadowDepth = 0, Opacity = 0.8 } : null,
                 Margin = distance switch { 0 => new Thickness(16, 10, 16, 10), 1 => new Thickness(12, 80, 12, 80), _ => new Thickness(10, 140, 10, 140) },
                 Opacity = distance switch { 0 => 1.0, 1 => 0.5, _ => 0.25 },
                 Child = new Grid { Children = { placeholder, image } },
@@ -316,7 +314,8 @@ public partial class MainWindow : Window
 
     void UpdateView()
     {
-        FilterText.Text = _filterIndex == 0 ? "VR PINBALL" : _filters[_filterIndex].Name.ToUpperInvariant();
+        FilterPanel.Visibility = _filterIndex == 0 ? Visibility.Collapsed : Visibility.Visible;
+        FilterText.Text = _filters.Count > 0 ? _filters[_filterIndex].Name.ToUpperInvariant() : "";
 
         if (_tables.Count == 0)
         {
@@ -332,7 +331,7 @@ public partial class MainWindow : Window
         }
 
         var current = _tables[_index];
-        TitleText.Text = current.Title;
+        TitleText.Text = current.Name; // maker and year are on the info line below
         InfoText.Text = DescribeGame(current);
         UpdatePanel.Visibility = current.Vps?.UpdateVersion != null ? Visibility.Visible : Visibility.Collapsed;
         UpdateText.Text = $"Newer version on VPS: {current.Vps?.UpdateVersion}";
@@ -407,18 +406,24 @@ public partial class MainWindow : Window
 
     void HideStatus() => StatusPanel.Visibility = Visibility.Collapsed;
 
-    // ---------- Playfield / rules viewer ----------
+    /// <summary>
+    /// The stub button an action is on, for the on-screen help. These name the cabinet buttons rather than
+    /// the keys they send; actions without a stub button yet fall back to the key name.
+    /// </summary>
+    string ButtonName(LauncherAction action) => action switch
+    {
+        LauncherAction.Launch => "Start",
+        LauncherAction.View => "Coin",
+        _ => _keys.Describe(action),
+    };
 
-    /// <summary>Closed -> playfield -> rules card -> closed.</summary>
+    // ---------- Rules viewer ----------
+
+    /// <summary>Opens or closes the rules card.</summary>
     void CycleViewer()
     {
         if (_tables.Count == 0) return;
-        _viewer = _viewer switch
-        {
-            ViewerMode.Closed => ViewerMode.Playfield,
-            ViewerMode.Playfield => ViewerMode.Rules,
-            _ => ViewerMode.Closed,
-        };
+        _viewer = _viewer == ViewerMode.Closed ? ViewerMode.Rules : ViewerMode.Closed;
         UpdateViewer();
     }
 
@@ -428,7 +433,7 @@ public partial class MainWindow : Window
         UpdateViewer();
     }
 
-    /// <summary>Shows the current table's playfield (Media\Playfields, then VPS) or rules card, loading it in the background.</summary>
+    /// <summary>Shows the current table's rules card, loading it in the background.</summary>
     void UpdateViewer()
     {
         var request = ++_viewerRequest;
@@ -440,29 +445,23 @@ public partial class MainWindow : Window
         }
 
         var table = _tables[_index];
-        var mode = _viewer;
-        var label = mode == ViewerMode.Playfield ? "PLAYFIELD" : "RULES";
         ViewerPanel.Visibility = Visibility.Visible;
-        ViewerCaption.Text = $"{label}  ·  {table.Title}";
+        ViewerCaption.Text = $"RULES  ·  {table.Title}";
         ViewerHint.Text =
-            $"{_keys.Describe(LauncherAction.View)}: {(mode == ViewerMode.Playfield ? "rules" : "close")}    " +
-            $"{_keys.Describe(LauncherAction.Previous)} / {_keys.Describe(LauncherAction.Next)}: browse    " +
-            $"{_keys.Describe(LauncherAction.Launch)}: play    " +
-            $"{_keys.Describe(LauncherAction.Exit)}: close";
+            $"{ButtonName(LauncherAction.View)}: close    " +
+            "Flippers: browse    " +
+            $"{ButtonName(LauncherAction.Launch)}: play";
         ViewerImage.Source = null;
         ViewerMessage.Text = "Loading…";
 
         var thumbnails = _thumbnails;
-        Task.Run(() => mode == ViewerMode.Playfield
-                ? thumbnails.LoadPlayfield(table, ViewerDecodeHeight)
-                : thumbnails.LoadRules(table, ViewerDecodeHeight))
+        Task.Run(() => thumbnails.LoadRules(table, ViewerDecodeHeight))
             .ContinueWith(task =>
             {
                 if (request != _viewerRequest) return; // the user has moved on
                 ViewerImage.Source = task.Result;
                 ViewerMessage.Text = task.Result != null ? ""
-                    : mode == ViewerMode.Rules ? $"No rules card for this table\nAdd one to Media\\Rules as \"{table.Title}.png\"\nor add _default.png there for all tables"
-                    : $"No playfield image for this table\nAdd one to Media\\Playfields as \"{table.Title}.png\"";
+                    : $"No rules card for this table\nAdd one to Media\\Rules as \"{table.Title}.png\"";
             }, TaskScheduler.FromCurrentSynchronizationContext());
     }
 
@@ -662,10 +661,4 @@ public partial class MainWindow : Window
     }
 
     static int Mod(int value, int modulus) => ((value % modulus) + modulus) % modulus;
-
-    static Brush Freeze(Brush brush)
-    {
-        brush.Freeze();
-        return brush;
-    }
 }

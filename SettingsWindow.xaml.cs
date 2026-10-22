@@ -10,23 +10,21 @@ namespace VRPLauncher;
 /// <summary>Edits the paths in settings.json. Key bindings and timings stay file-only.</summary>
 public partial class SettingsWindow : Window
 {
-    static readonly Brush HintBrush = new SolidColorBrush(Color.FromRgb(0xA0, 0xA0, 0xA0));
+    static readonly Brush HintBrush = new SolidColorBrush(Color.FromRgb(0x91, 0xA2, 0xB8)); // Chrome Midtone
     static readonly Brush WarningBrush = new SolidColorBrush(Color.FromRgb(0xFF, 0x6B, 0x6B));
 
     readonly ObservableCollection<string> _imageFolders;
     readonly ObservableCollection<string> _rulesFolders;
     readonly string _wheelMediaDir;
-    readonly string _playfieldMediaDir;
     readonly string _rulesMediaDir;
 
     public Settings Result { get; }
 
-    public SettingsWindow(Settings settings, string wheelMediaDir, string playfieldMediaDir, string rulesMediaDir)
+    public SettingsWindow(Settings settings, string wheelMediaDir, string rulesMediaDir)
     {
         InitializeComponent();
         Result = settings;
         _wheelMediaDir = wheelMediaDir;
-        _playfieldMediaDir = playfieldMediaDir;
         _rulesMediaDir = rulesMediaDir;
         MaxHeight = SystemParameters.WorkArea.Height;
 
@@ -35,7 +33,6 @@ public partial class SettingsWindow : Window
         TablesBox.Text = settings.TablesFolder;
         SubfoldersBox.IsChecked = settings.IncludeSubfolders;
         WheelMediaText.Text = wheelMediaDir;
-        PlayfieldMediaText.Text = playfieldMediaDir;
         RulesMediaText.Text = rulesMediaDir;
         _imageFolders = new ObservableCollection<string>(settings.ImageFolders);
         ImageFoldersList.ItemsSource = _imageFolders;
@@ -72,8 +69,6 @@ public partial class SettingsWindow : Window
 
         ShowFolderStatus(ImagesStatus, [_wheelMediaDir, .. _imageFolders]);
         ShowFolderStatus(RulesStatus, [_rulesMediaDir, .. _rulesFolders]);
-        ShowFolderStatus(PlayfieldStatus, [_playfieldMediaDir]);
-        PlayfieldStatus.Text += " Used before the VPS playfield. Name them like the wheel images.";
     }
 
     static void ShowFolderStatus(TextBlock status, List<string> folders)
@@ -112,8 +107,6 @@ public partial class SettingsWindow : Window
     }
 
     void OpenWheelMedia_Click(object sender, RoutedEventArgs e) => OpenInExplorer(_wheelMediaDir);
-
-    void OpenPlayfieldMedia_Click(object sender, RoutedEventArgs e) => OpenInExplorer(_playfieldMediaDir);
 
     void OpenRulesMedia_Click(object sender, RoutedEventArgs e) => OpenInExplorer(_rulesMediaDir);
 

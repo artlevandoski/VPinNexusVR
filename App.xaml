@@ -2,4 +2,24 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              ShutdownMode="OnMainWindowClose">
+    <Application.Resources>
+        <!-- VPin Nexus VR brand: fonts (Assets\Fonts) and colours (Assets\Brand\Colour Chart.png) -->
+        <FontFamily x:Key="TitleFont">pack://application:,,,/Assets/Fonts/#Orbitron</FontFamily>
+        <FontFamily x:Key="BodyFont">pack://application:,,,/Assets/Fonts/#Exo 2</FontFamily>
+
+        <SolidColorBrush x:Key="MidnightNavy" Color="#080D1B" />
+        <SolidColorBrush x:Key="NexusCyan" Color="#00D8FF" />
+        <SolidColorBrush x:Key="OrbitViolet" Color="#7854FF" />
+        <SolidColorBrush x:Key="VrOrange" Color="#FF8A2A" />
+        <SolidColorBrush x:Key="SilverWhite" Color="#E8EEF5" />
+        <SolidColorBrush x:Key="ElectricBlue" Color="#0066FF" />
+        <SolidColorBrush x:Key="ChromeShadow" Color="#33465F" />
+        <SolidColorBrush x:Key="ChromeMidtone" Color="#91A2B8" />
+        <SolidColorBrush x:Key="BadgeInk" Color="#080808" />
+
+        <!-- Panels a step lighter than the background -->
+        <SolidColorBrush x:Key="PanelNavy" Color="#101A33" />
+
+        <BitmapImage x:Key="Logo" UriSource="pack://application:,,,/Assets/Brand/Logo.png" />
+    </Application.Resources>
 </Application>

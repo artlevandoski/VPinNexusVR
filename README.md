@@ -6,7 +6,7 @@ It is built to be driven entirely from a VR pinball stub's buttons and to read w
 - Scans a tables folder for `.vpx` files and shows them in a big carousel.
 - Thumbnails, in order: an image next to the `.vpx` with the same name, wheel art from the built-in `Media\Wheels` folder and then the configured wheel folders (PinUP wheel images by default), the backglass inside a same-named `.directb2s`, then the VPS backglass.
 - Rules cards from the built-in `Media\Rules` folder (and any extra rules folders), shown full screen on request.
-- Uses the [Virtual Pinball Spreadsheet](https://virtualpinballspreadsheet.github.io/) database for game info, playfield/backglass pictures, filters and "newer version available" notices.
+- Uses the [Virtual Pinball Spreadsheet](https://virtualpinballspreadsheet.github.io/) database for game info, backglass pictures, filters and "newer version available" notices.
 - Launches VPX with configurable arguments, then brings itself back to the foreground when VPX exits.
 - Remembers the last table you played.
 
@@ -28,7 +28,7 @@ This writes `publish\VRPLauncher.exe`. Run it from anywhere; on first run it cre
 | Jump to previous / next letter | Left Ctrl / Right Ctrl, arrow Up / Down, PageUp / PageDown | Magna-save |
 | Play | 1, Enter | Start, plunger |
 | Quit the launcher | hold Esc for 1.5 s | Exit |
-| Show playfield, then rules card, then close | 5, V | Coin |
+| Show / close the rules card | 5, V | Coin |
 | Next / previous filter | 2, F / G | Extra ball (2) |
 | Open settings | F2 | (keyboard) |
 
@@ -40,7 +40,7 @@ The cache is kept in a `vps` folder next to `settings.json`, with downloaded pic
 Each table is matched to a VPS game by the "Name (Maker Year)" part of its file name. A few loosely named files are matched by year and a partial name.
 
 - **Game info:** manufacturer, year, type, players, theme and designers are shown under the selected table.
-- **Pictures:** wheel art stays the main picture. Press **5** to see the playfield (from `Media\Playfields`, otherwise VPS), **5** again for the table's rules card (see below), and **5** again to close. The flippers browse tables while the pictures are open, and Esc closes them.
+- **Rules:** press **Coin** (5) to show the table's rules card full screen and again to close it. The flippers browse tables while it is open, and Esc also closes it.
 - **Updates:** if VPS lists a newer VPX release whose *main* author appears in your file name (for example "VPW" or "RobbyKingPin"), a green "Newer version on VPS" badge is shown. Releases where your author is only a contributor are ignored. Some newer releases need a newer VPX than 10.7, so check the release notes before updating.
 - **Filters:** **2** cycles through All tables, Updates on VPS, Electro-mechanical / Solid state, decades, and every manufacturer with at least 3 tables. The current filter is shown at the top left.
 
@@ -51,11 +51,20 @@ Untick "Use VPS data" in the settings window to turn all of this off.
 The launcher creates a `Media` folder next to `settings.json` (normally next to the exe):
 
 - `Media\Wheels`: wheel art, searched before any other wheel folder.
-- `Media\Playfields`: playfield pictures for the viewer, used before the VPS playfield.
 - `Media\Rules`: rules cards for the viewer. Save an image as `_default.png` here to show it for every table that has no rules card of its own. If there is none, the launcher shows its built-in "Rules card not available" image.
 
 To add or replace a picture, save it as `Table Name (Maker Year).png` (`.jpg` and `.bmp` also work), e.g. `24 (Stern 2009).png`. The launcher also accepts the full table file name. Changes are picked up the next time the launcher starts or settings are saved.
 The settings window has an **Open** button for each folder. You can also add more wheel or rules folders there.
+
+## Branding
+
+The launcher uses the VPin Nexus VR brand:
+
+- Logo: `Assets\Brand\Logo.png` (header and "Now playing" screen).
+- Colours: from `Assets\Brand\Colour Chart.png`, defined once in `App.xaml` (Midnight Navy background, Nexus Cyan accents, VR Orange update badge, Silver White text, Chrome Midtone secondary text).
+- Fonts: Orbitron for titles and headings, Exo 2 for everything else, in `Assets\Fonts`. Both use the SIL Open Font License (`OFL-*.txt` alongside), which allows bundling them in the app.
+
+The logo and fonts are compiled into the exe, so nothing needs installing. To change them, replace the file with one of the same name and run `publish.cmd`.
 
 ## Built-in default pictures
 

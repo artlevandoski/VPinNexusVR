@@ -128,7 +128,7 @@ public sealed class ImageIndex
 /// <summary>
 /// Finds a picture for a table, in this order: an image beside the .vpx with the same name,
 /// the wheel folders, the backglass inside a same-named .directb2s, then the VPS backglass.
-/// Also loads playfields (local folder first, then VPS) and rules cards.
+/// Also loads rules cards.
 /// </summary>
 public sealed class ThumbnailFinder
 {
@@ -137,16 +137,14 @@ public sealed class ThumbnailFinder
     readonly bool _useDirectB2S;
     readonly VpsClient? _vps;
     readonly ImageIndex _wheels;
-    readonly ImageIndex _playfields;
     readonly ImageIndex _rules;
 
     public ThumbnailFinder(Settings settings, VpsClient? vps,
-        IEnumerable<string> wheelFolders, IEnumerable<string> playfieldFolders, IEnumerable<string> rulesFolders)
+        IEnumerable<string> wheelFolders, IEnumerable<string> rulesFolders)
     {
         _useDirectB2S = settings.UseDirectB2SImages;
         _vps = vps;
         _wheels = new ImageIndex(wheelFolders);
-        _playfields = new ImageIndex(playfieldFolders);
         _rules = new ImageIndex(rulesFolders);
     }
 
@@ -173,21 +171,6 @@ public sealed class ThumbnailFinder
             // A broken image just leaves the text placeholder.
         }
         return null;
-    }
-
-    /// <summary>The table's playfield: from the playfield folders if there is one, otherwise from VPS.</summary>
-    public ImageSource? LoadPlayfield(TableEntry table, int decodeHeight)
-    {
-        try
-        {
-            if (_playfields.Find(table) is { } path)
-                return FromFile(path, decodeHeight);
-            return LoadVpsImage(table.Vps?.PlayfieldUrl, decodeHeight);
-        }
-        catch
-        {
-            return null;
-        }
     }
 
     /// <summary>

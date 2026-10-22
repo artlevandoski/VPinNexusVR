@@ -20,4 +20,10 @@
     <EmbeddedResource Include="Assets\Defaults\*.png" LogicalName="Defaults.%(Filename)%(Extension)" />
   </ItemGroup>
 
+  <!-- Brand fonts (SIL Open Font License, see Assets\Fonts\OFL-*.txt) and logo, compiled into the exe as WPF resources. -->
+  <ItemGroup>
+    <Resource Include="Assets\Fonts\*.ttf" />
+    <Resource Include="Assets\Brand\Logo.png" />
+  </ItemGroup>
+
 </Project>
