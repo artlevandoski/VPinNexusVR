@@ -24,7 +24,44 @@
                 <RowDefinition Height="80" />
             </Grid.RowDefinitions>
 
-            <!-- Header: logo and active filter, current letter, last key and position -->
+            <!-- Background: soft brand-colour glows and faint orbit rings over the navy, kept dim so the wheels stand out. -->
+            <Grid Grid.RowSpan="4" IsHitTestVisible="False" ClipToBounds="True">
+                <Rectangle>
+                    <Rectangle.Fill>
+                        <RadialGradientBrush Center="0.5,0.42" GradientOrigin="0.5,0.42" RadiusX="0.55" RadiusY="0.6">
+                            <GradientStop Color="#2600D8FF" Offset="0" />
+                            <GradientStop Color="#0000D8FF" Offset="1" />
+                        </RadialGradientBrush>
+                    </Rectangle.Fill>
+                </Rectangle>
+                <Rectangle>
+                    <Rectangle.Fill>
+                        <RadialGradientBrush Center="1,1" GradientOrigin="1,1" RadiusX="0.6" RadiusY="0.7">
+                            <GradientStop Color="#307854FF" Offset="0" />
+                            <GradientStop Color="#007854FF" Offset="1" />
+                        </RadialGradientBrush>
+                    </Rectangle.Fill>
+                </Rectangle>
+                <Rectangle>
+                    <Rectangle.Fill>
+                        <RadialGradientBrush Center="0,0" GradientOrigin="0,0" RadiusX="0.5" RadiusY="0.6">
+                            <GradientStop Color="#220066FF" Offset="0" />
+                            <GradientStop Color="#000066FF" Offset="1" />
+                        </RadialGradientBrush>
+                    </Rectangle.Fill>
+                </Rectangle>
+                <!-- Orbit rings echoing the logo, tilted and centred behind the carousel -->
+                <Canvas>
+                    <Canvas.RenderTransform>
+                        <RotateTransform Angle="-14" CenterX="960" CenterY="470" />
+                    </Canvas.RenderTransform>
+                    <Ellipse Canvas.Left="60" Canvas.Top="190" Width="1800" Height="560" Stroke="#00D8FF" StrokeThickness="3" Opacity="0.08" />
+                    <Ellipse Canvas.Left="210" Canvas.Top="250" Width="1500" Height="440" Stroke="#7854FF" StrokeThickness="2" Opacity="0.10" />
+                    <Ellipse Canvas.Left="-140" Canvas.Top="110" Width="2200" Height="720" Stroke="#0066FF" StrokeThickness="2" Opacity="0.07" />
+                </Canvas>
+            </Grid>
+
+            <!-- Header: logo and active filter, current letter and position -->
             <StackPanel Grid.Row="0" Margin="40,0" Orientation="Horizontal" VerticalAlignment="Center">
                 <Image Source="{StaticResource Logo}" Height="140" RenderOptions.BitmapScalingMode="HighQuality" />
                 <Border x:Name="FilterPanel" Margin="24,0,0,0" VerticalAlignment="Center" Padding="18,6"
@@ -35,7 +72,6 @@
             <TextBlock x:Name="LetterText" Grid.Row="0" Style="{StaticResource Title}" FontWeight="Black"
                        HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="64" Foreground="{StaticResource NexusCyan}" />
             <StackPanel Grid.Row="0" Margin="50,0" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                <TextBlock x:Name="LastKeyText" VerticalAlignment="Center" Margin="0,0,40,0" FontSize="24" Foreground="{StaticResource ChromeMidtone}" />
                 <TextBlock x:Name="CounterText" Style="{StaticResource Title}" VerticalAlignment="Center" FontSize="42"
                            Foreground="{StaticResource SilverWhite}" />
             </StackPanel>

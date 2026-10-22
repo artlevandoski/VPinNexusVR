@@ -78,7 +78,7 @@ Press **F2** to set the VPX exe, launch arguments, tables folder and wheel/image
 It also opens by itself at startup if the VPX exe or tables folder can't be found.
 Saving rewrites `settings.json`, so any comments you added to that file are removed. Key bindings and timings can only be changed in the file.
 
-The top right shows the name of the last key pressed, which is the name to put in `settings.json` if you want to rebind a button.
+To rebind a button, put the WPF key name it sends (see below) in `settings.json`.
 
 Quitting needs a hold so that the Esc press that closes VPX can't also close the launcher. Input is also ignored for a moment after VPX exits.
 

@@ -294,17 +294,20 @@ public partial class MainWindow : Window
                 VerticalAlignment = VerticalAlignment.Center,
                 Margin = new Thickness(20),
             };
-            var border = new Border
+            // Just the coloured outline, so the background shows through the square. It is a separate
+            // element so the selected table's glow comes from the outline only, not the wheel art.
+            var frame = new Border
             {
-                Background = (Brush)FindResource("PanelNavy"),
                 CornerRadius = new CornerRadius(16),
                 BorderBrush = (Brush)FindResource("NexusCyan"),
-                BorderThickness = new Thickness(distance == 0 ? 6 : 0),
-                // Cyan glow around the selected table.
+                BorderThickness = new Thickness(distance == 0 ? 6 : 3),
                 Effect = distance == 0 ? new DropShadowEffect { Color = Color.FromRgb(0x00, 0xD8, 0xFF), BlurRadius = 40, ShadowDepth = 0, Opacity = 0.8 } : null,
+            };
+            var border = new Border
+            {
                 Margin = distance switch { 0 => new Thickness(16, 10, 16, 10), 1 => new Thickness(12, 80, 12, 80), _ => new Thickness(10, 140, 10, 140) },
                 Opacity = distance switch { 0 => 1.0, 1 => 0.5, _ => 0.25 },
-                Child = new Grid { Children = { placeholder, image } },
+                Child = new Grid { Children = { frame, placeholder, image } },
             };
             Grid.SetColumn(border, offset + 2);
             Carousel.Children.Add(border);
@@ -470,7 +473,6 @@ public partial class MainWindow : Window
     void OnKeyDown(object sender, KeyEventArgs e)
     {
         var key = e.Key == Key.System ? e.SystemKey : e.Key;
-        LastKeyText.Text = $"Last key: {key}";
 
         if (!_keys.TryGet(key, out var action))
             return;
