@@ -12,3 +12,4 @@ state.json
 # Image folders and the VPS download cache, also written next to the exe
 Media/
 vps/
+cache/

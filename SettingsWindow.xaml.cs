@@ -30,6 +30,7 @@ public partial class SettingsWindow : Window
         (LauncherAction.View, "Rules card  (Coin)"),
         (LauncherAction.NextFilter, "Next filter"),
         (LauncherAction.PreviousFilter, "Previous filter"),
+        (LauncherAction.ToggleMusic, "Music on/off"),
         (LauncherAction.Exit, "Quit launcher  (hold)"),
         (LauncherAction.Settings, "Settings"),
     ];
@@ -63,12 +64,20 @@ public partial class SettingsWindow : Window
         DirectB2SBox.IsChecked = settings.UseDirectB2SImages;
         FullscreenBox.IsChecked = settings.Fullscreen;
         VpsBox.IsChecked = settings.UseVps;
+        MusicBox.IsChecked = settings.MusicEnabled;
+        MusicVolumeSlider.Value = Math.Round(settings.MusicVolume * 100);
 
         _keys = settings.Keys;
         BuildControlRows();
         PreviewKeyDown += CaptureKey;
 
         UpdateStatus();
+    }
+
+    void MusicVolume_Changed(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (MusicVolumeText != null)
+            MusicVolumeText.Text = $"{e.NewValue:0}%";
     }
 
     // ---------- Controls ----------
@@ -301,6 +310,8 @@ public partial class SettingsWindow : Window
         Result.Fullscreen = FullscreenBox.IsChecked == true;
         Result.UseVps = VpsBox.IsChecked == true;
         Result.Keys = _keys;
+        Result.MusicEnabled = MusicBox.IsChecked == true;
+        Result.MusicVolume = MusicVolumeSlider.Value / 100;
         DialogResult = true;
     }
 }

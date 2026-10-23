@@ -102,6 +102,17 @@
         <TextBlock Style="{StaticResource Heading}" Text="Virtual Pinball Spreadsheet" />
         <CheckBox x:Name="VpsBox" Content="Use VPS data: game info, filters, update check" />
 
+        <TextBlock Style="{StaticResource Heading}" Text="Music" />
+        <CheckBox x:Name="MusicBox" Content="Play quiet background music" />
+        <DockPanel Margin="0,8,0,0">
+            <TextBlock Text="Volume" Width="90" VerticalAlignment="Center" />
+            <TextBlock x:Name="MusicVolumeText" DockPanel.Dock="Right" Width="60" TextAlignment="Right" VerticalAlignment="Center" />
+            <Slider x:Name="MusicVolumeSlider" Minimum="0" Maximum="100" SmallChange="1" LargeChange="5"
+                    IsSnapToTickEnabled="True" TickFrequency="1" VerticalAlignment="Center" ValueChanged="MusicVolume_Changed" />
+        </DockPanel>
+        <TextBlock Style="{StaticResource Hint}"
+                   Text="Plays the built-in track, or any MP3s you put in Media\Music (shuffled). Fades out while a table is playing." />
+
         <TextBlock Style="{StaticResource Heading}" Text="Display" />
         <CheckBox x:Name="FullscreenBox" Content="Fullscreen (hides the mouse pointer)" />
 

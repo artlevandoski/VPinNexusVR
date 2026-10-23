@@ -15,6 +15,7 @@ public sealed class KeyBindings
     public List<string> View { get; set; } = ["D5", "V"];
     public List<string> NextFilter { get; set; } = ["D2", "F"];
     public List<string> PreviousFilter { get; set; } = ["G"];
+    public List<string> ToggleMusic { get; set; } = ["M"];
 
     /// <summary>The key names bound to an action.</summary>
     public List<string> For(LauncherAction action) => action switch
@@ -29,6 +30,7 @@ public sealed class KeyBindings
         LauncherAction.View => View,
         LauncherAction.NextFilter => NextFilter,
         LauncherAction.PreviousFilter => PreviousFilter,
+        LauncherAction.ToggleMusic => ToggleMusic,
         _ => throw new ArgumentOutOfRangeException(nameof(action)),
     };
 
@@ -46,6 +48,7 @@ public sealed class KeyBindings
             case LauncherAction.View: View = keys; break;
             case LauncherAction.NextFilter: NextFilter = keys; break;
             case LauncherAction.PreviousFilter: PreviousFilter = keys; break;
+            case LauncherAction.ToggleMusic: ToggleMusic = keys; break;
             default: throw new ArgumentOutOfRangeException(nameof(action));
         }
     }
@@ -73,6 +76,12 @@ public sealed class Settings
 
     /// <summary>Use the backglass image inside a matching .directb2s file when one exists.</summary>
     public bool UseDirectB2SImages { get; set; } = true;
+
+    /// <summary>Quiet background music (Media\Music, or the built-in track).</summary>
+    public bool MusicEnabled { get; set; } = true;
+
+    /// <summary>Music volume, 0 to 1.</summary>
+    public double MusicVolume { get; set; } = 0.15;
 
     /// <summary>Use the Virtual Pinball Spreadsheet database for game info, images, filters and update checks.</summary>
     public bool UseVps { get; set; } = true;

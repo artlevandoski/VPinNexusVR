@@ -46,6 +46,14 @@ Each table is matched to a VPS game by the "Name (Maker Year)" part of its file 
 
 Untick "Use VPS data" in the settings window to turn all of this off.
 
+## Background music
+
+Quiet background music plays while you browse. It fades in when the launcher opens, fades out while a table is playing and fades back in when you return; each track also fades at its end so the loop is not abrupt.
+
+- The built-in track is `Assets\Audio\vpinnexus.mp3`, compiled into the exe.
+- To use your own music instead, put MP3s (or M4A, WMA, WAV) in `Media\Music`; they play in shuffled order.
+- Turn it on or off and set the volume (default 15%) in the settings window, or press **M** (rebindable in Controls) to toggle it.
+
 ## Built-in image folders
 
 The launcher creates a `Media` folder next to `settings.json` (normally next to the exe):
@@ -100,6 +108,8 @@ Quitting needs a hold so that the Esc press that closes VPX can't also close the
   "RulesFolders": [],         // extra rules folders; Media\Rules is always searched first
   "UseDirectB2SImages": true,
   "UseVps": true,
+  "MusicEnabled": true,
+  "MusicVolume": 0.15,       // 0 to 1
   "Fullscreen": true,
   "MinimizeWhileRunning": true,
   "InputCooldownMs": 1500,   // ignore keys this long after VPX exits
@@ -114,7 +124,8 @@ Quitting needs a hold so that the Esc press that closes VPX can't also close the
     "Settings": ["F2"],
     "View": ["D5", "V"],
     "NextFilter": ["D2", "F"],
-    "PreviousFilter": ["G"]
+    "PreviousFilter": ["G"],
+    "ToggleMusic": ["M"]
   }
 }
 ```

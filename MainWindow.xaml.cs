@@ -23,6 +23,7 @@ public partial class MainWindow : Window
     readonly string _vpsCacheDir;
     readonly string _wheelMediaDir;
     readonly string _rulesMediaDir;
+    readonly MusicPlayer _music;
     readonly LauncherState _state;
     readonly List<Slot> _slots = [];
     readonly DispatcherTimer _exitTimer;
@@ -63,10 +64,12 @@ public partial class MainWindow : Window
         // Built-in image folders next to the exe: drop "Table Name (Maker Year).png" files in to add or replace pictures.
         _wheelMediaDir = Path.Combine(dataDir, "Media", "Wheels");
         _rulesMediaDir = Path.Combine(dataDir, "Media", "Rules");
+        var musicDir = Path.Combine(dataDir, "Media", "Music");
         try
         {
             Directory.CreateDirectory(_wheelMediaDir);
             Directory.CreateDirectory(_rulesMediaDir);
+            Directory.CreateDirectory(musicDir);
         }
         catch
         {
@@ -75,6 +78,7 @@ public partial class MainWindow : Window
         _settings = Settings.LoadOrCreate(settingsPath, out var settingsError);
         _state = LauncherState.Load(_statePath);
 
+        _music = new MusicPlayer(musicDir, Path.Combine(dataDir, "cache"));
         CreateSlots();
         ApplySettings(settingsError);
 
@@ -89,6 +93,7 @@ public partial class MainWindow : Window
         Loaded += (_, _) =>
         {
             BringToFront();
+            _music.Play();
             // First run, or paths that no longer exist: go straight to setup.
             if (!File.Exists(_settings.VpxExePath) || !Directory.Exists(_settings.TablesFolder))
                 Dispatcher.BeginInvoke(OpenSettings, DispatcherPriority.ApplicationIdle);
@@ -114,6 +119,7 @@ public partial class MainWindow : Window
         }
 
         _keys = new KeyMap(_settings.Keys);
+        _music.Configure(_settings.MusicEnabled, _settings.MusicVolume);
         _vps = _settings.UseVps ? new VpsClient(_vpsCacheDir) : null;
         _thumbnails = new ThumbnailFinder(_settings, _vps,
             [_wheelMediaDir, .. _settings.ImageFolders],
@@ -495,6 +501,7 @@ public partial class MainWindow : Window
             case LauncherAction.Exit when !e.IsRepeat && _viewer != ViewerMode.Closed: CloseViewer(); break;
             case LauncherAction.Exit when !e.IsRepeat: StartExitHold(key); break;
             case LauncherAction.Settings when !e.IsRepeat: OpenSettings(); break;
+            case LauncherAction.ToggleMusic when !e.IsRepeat: ToggleMusic(); break;
         }
     }
 
@@ -541,6 +548,14 @@ public partial class MainWindow : Window
         _index = i;
         HideStatus();
         UpdateView();
+    }
+
+    /// <summary>Turns the music on or off and remembers the choice.</summary>
+    void ToggleMusic()
+    {
+        _settings.MusicEnabled = !_settings.MusicEnabled;
+        _music.ToggleEnabled(_settings.MusicEnabled);
+        try { _settings.Save(_settingsPath); } catch { /* still toggled for this session */ }
     }
 
     void StartExitHold(Key key)
@@ -619,6 +634,7 @@ public partial class MainWindow : Window
         HideStatus();
         PlayingText.Text = table.Title;
         PlayingPanel.Visibility = Visibility.Visible;
+        _music.Pause();
         if (_settings.MinimizeWhileRunning)
             WindowState = WindowState.Minimized;
 
@@ -648,6 +664,7 @@ public partial class MainWindow : Window
         _ignoreInputUntil = DateTime.UtcNow.AddMilliseconds(_settings.InputCooldownMs);
         if (vrError != null)
             ShowStatus(vrError);
+        _music.Play();
         BringToFront();
     }
 
