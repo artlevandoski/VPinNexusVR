@@ -40,6 +40,10 @@ public sealed class KeyMap
         Key.RightShift => "Right Shift",
         Key.LeftCtrl => "Left Ctrl",
         Key.RightCtrl => "Right Ctrl",
+        Key.LeftAlt => "Left Alt",
+        Key.RightAlt => "Right Alt",
+        Key.PageUp => "Page Up",
+        Key.PageDown => "Page Down",
         _ => key.ToString(),
     };
 
@@ -59,7 +63,7 @@ public sealed class KeyMap
         _keys[action] = list;
     }
 
-    static bool TryParse(string name, out Key key)
+    public static bool TryParse(string name, out Key key)
     {
         // Allow "1" as shorthand for D1.
         if (name.Length == 1 && char.IsDigit(name[0]))

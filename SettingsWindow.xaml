@@ -105,6 +105,16 @@
         <TextBlock Style="{StaticResource Heading}" Text="Display" />
         <CheckBox x:Name="FullscreenBox" Content="Fullscreen (hides the mouse pointer)" />
 
+        <TextBlock Style="{StaticResource Heading}" Text="Controls" />
+        <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,8"
+                   Text="Click Add key…, then press the button on your stub (or a key). Each key does one thing, so it is moved from any other action. The menu shows the cabinet button names; this list shows the keys they send." />
+        <!-- One row per action, built in code -->
+        <StackPanel x:Name="ControlsPanel" />
+        <DockPanel Margin="0,8,0,0">
+            <Button DockPanel.Dock="Right" Content="Reset to defaults" Click="ResetControls_Click" />
+            <TextBlock x:Name="ControlsStatus" Style="{StaticResource Hint}" VerticalAlignment="Center" Margin="0" />
+        </DockPanel>
+
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,28,0,0">
             <Button Content="Save" IsDefault="True" Click="Save_Click" FontWeight="Bold" />
             <Button Content="Cancel" IsCancel="True" />

@@ -76,9 +76,12 @@ A `_default` image in a `Media` folder always takes priority over the built-in o
 
 Press **F2** to set the VPX exe, launch arguments, tables folder and wheel/image folders with Browse buttons. It shows how many tables and images it finds as you go, and **Save** applies the changes immediately.
 It also opens by itself at startup if the VPX exe or tables folder can't be found.
-Saving rewrites `settings.json`, so any comments you added to that file are removed. Key bindings and timings can only be changed in the file.
+Saving rewrites `settings.json`, so any comments you added to that file are removed. Timings (input cooldown, exit hold) can only be changed in the file.
 
-To rebind a button, put the WPF key name it sends (see below) in `settings.json`.
+### Controls
+
+The **Controls** section of the settings window lists every action with the keys bound to it. Click **Add key…** and press the button on your stub to bind it; a key can only do one thing, so it is taken off any other action. **Clear** removes an action's keys and **Reset to defaults** restores the VPX default keys. Settings and Quit must keep at least one key.
+The menu shows cabinet button names (Flippers, Magna Saves, Start, Coin); the settings window shows the actual keys.
 
 Quitting needs a hold so that the Esc press that closes VPX can't also close the launcher. Input is also ignored for a moment after VPX exits.
 

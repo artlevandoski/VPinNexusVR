@@ -15,6 +15,40 @@ public sealed class KeyBindings
     public List<string> View { get; set; } = ["D5", "V"];
     public List<string> NextFilter { get; set; } = ["D2", "F"];
     public List<string> PreviousFilter { get; set; } = ["G"];
+
+    /// <summary>The key names bound to an action.</summary>
+    public List<string> For(LauncherAction action) => action switch
+    {
+        LauncherAction.Previous => Previous,
+        LauncherAction.Next => Next,
+        LauncherAction.PreviousLetter => PreviousLetter,
+        LauncherAction.NextLetter => NextLetter,
+        LauncherAction.Launch => Launch,
+        LauncherAction.Exit => Exit,
+        LauncherAction.Settings => Settings,
+        LauncherAction.View => View,
+        LauncherAction.NextFilter => NextFilter,
+        LauncherAction.PreviousFilter => PreviousFilter,
+        _ => throw new ArgumentOutOfRangeException(nameof(action)),
+    };
+
+    public void Set(LauncherAction action, List<string> keys)
+    {
+        switch (action)
+        {
+            case LauncherAction.Previous: Previous = keys; break;
+            case LauncherAction.Next: Next = keys; break;
+            case LauncherAction.PreviousLetter: PreviousLetter = keys; break;
+            case LauncherAction.NextLetter: NextLetter = keys; break;
+            case LauncherAction.Launch: Launch = keys; break;
+            case LauncherAction.Exit: Exit = keys; break;
+            case LauncherAction.Settings: Settings = keys; break;
+            case LauncherAction.View: View = keys; break;
+            case LauncherAction.NextFilter: NextFilter = keys; break;
+            case LauncherAction.PreviousFilter: PreviousFilter = keys; break;
+            default: throw new ArgumentOutOfRangeException(nameof(action));
+        }
+    }
 }
 
 public sealed class Settings

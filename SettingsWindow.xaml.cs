@@ -2,12 +2,13 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using Microsoft.Win32;
 
 namespace VRPLauncher;
 
-/// <summary>Edits the paths in settings.json. Key bindings and timings stay file-only.</summary>
+/// <summary>Edits settings.json: paths, display options and key bindings. Timings stay file-only.</summary>
 public partial class SettingsWindow : Window
 {
     static readonly Brush HintBrush = new SolidColorBrush(Color.FromRgb(0x91, 0xA2, 0xB8)); // Chrome Midtone
@@ -17,6 +18,25 @@ public partial class SettingsWindow : Window
     readonly ObservableCollection<string> _rulesFolders;
     readonly string _wheelMediaDir;
     readonly string _rulesMediaDir;
+
+    // Controls: the actions in the order shown, with their label and (if any) the cabinet button they are meant for.
+    static readonly (LauncherAction Action, string Label)[] ControlRows =
+    [
+        (LauncherAction.Previous, "Previous table  (Left Flipper)"),
+        (LauncherAction.Next, "Next table  (Right Flipper)"),
+        (LauncherAction.PreviousLetter, "Previous letter  (Left Magna Save)"),
+        (LauncherAction.NextLetter, "Next letter  (Right Magna Save)"),
+        (LauncherAction.Launch, "Play  (Start)"),
+        (LauncherAction.View, "Rules card  (Coin)"),
+        (LauncherAction.NextFilter, "Next filter"),
+        (LauncherAction.PreviousFilter, "Previous filter"),
+        (LauncherAction.Exit, "Quit launcher  (hold)"),
+        (LauncherAction.Settings, "Settings"),
+    ];
+
+    KeyBindings _keys;
+    readonly Dictionary<LauncherAction, (TextBlock Keys, Button Add)> _controlRows = new();
+    LauncherAction? _capturing;
 
     public Settings Result { get; }
 
@@ -44,7 +64,98 @@ public partial class SettingsWindow : Window
         FullscreenBox.IsChecked = settings.Fullscreen;
         VpsBox.IsChecked = settings.UseVps;
 
+        _keys = settings.Keys;
+        BuildControlRows();
+        PreviewKeyDown += CaptureKey;
+
         UpdateStatus();
+    }
+
+    // ---------- Controls ----------
+
+    void BuildControlRows()
+    {
+        foreach (var (action, label) in ControlRows)
+        {
+            var add = new Button { Content = "Add key…", Tag = action };
+            add.Click += AddKey_Click;
+            var clear = new Button { Content = "Clear", Tag = action };
+            clear.Click += ClearKeys_Click;
+            var keys = new TextBlock { VerticalAlignment = VerticalAlignment.Center, Foreground = (Brush)FindResource("NexusCyan"), TextTrimming = TextTrimming.CharacterEllipsis };
+            var name = new TextBlock { Text = label, Width = 330, VerticalAlignment = VerticalAlignment.Center, Foreground = (Brush)FindResource("SilverWhite") };
+
+            var row = new DockPanel { Margin = new Thickness(0, 4, 0, 4) };
+            DockPanel.SetDock(name, Dock.Left);
+            DockPanel.SetDock(clear, Dock.Right);
+            DockPanel.SetDock(add, Dock.Right);
+            row.Children.Add(name);
+            row.Children.Add(clear);
+            row.Children.Add(add);
+            row.Children.Add(keys);
+            ControlsPanel.Children.Add(row);
+            _controlRows[action] = (keys, add);
+        }
+        ShowKeys();
+    }
+
+    void ShowKeys()
+    {
+        ControlsStatus.Foreground = HintBrush;
+        foreach (var (action, row) in _controlRows)
+        {
+            var names = _keys.For(action).Select(n => KeyMap.TryParse(n, out var key) ? KeyMap.Describe(key) : $"{n}?").ToList();
+            row.Keys.Text = names.Count > 0 ? string.Join(",  ", names) : "(none)";
+            row.Add.Content = _capturing == action ? "Press a key…" : "Add key…";
+        }
+    }
+
+    void AddKey_Click(object sender, RoutedEventArgs e)
+    {
+        var action = (LauncherAction)((Button)sender).Tag;
+        // Clicking again while waiting cancels.
+        _capturing = _capturing == action ? null : action;
+        ControlsStatus.Text = _capturing != null ? "Press the button or key to use…" : "";
+        ShowKeys();
+    }
+
+    void ClearKeys_Click(object sender, RoutedEventArgs e)
+    {
+        var action = (LauncherAction)((Button)sender).Tag;
+        _keys.Set(action, []);
+        _capturing = null;
+        ControlsStatus.Text = "";
+        ShowKeys();
+    }
+
+    void ResetControls_Click(object sender, RoutedEventArgs e)
+    {
+        _keys = new KeyBindings();
+        _capturing = null;
+        ControlsStatus.Text = "Controls reset to the VPX default keys.";
+        ShowKeys();
+    }
+
+    /// <summary>While waiting for a key, the next key press is bound (Esc and Enter included) instead of acting on the window.</summary>
+    void CaptureKey(object sender, KeyEventArgs e)
+    {
+        if (_capturing is not { } action) return;
+        var key = e.Key == Key.System ? e.SystemKey : e.Key;
+        if (key is Key.None or Key.ImeProcessed or Key.DeadCharProcessed) return;
+        e.Handled = true;
+
+        // A key can only do one thing: take it off any other action first.
+        var movedFrom = new List<string>();
+        foreach (var (other, label) in ControlRows)
+        {
+            var list = _keys.For(other);
+            if (list.RemoveAll(n => KeyMap.TryParse(n, out var k) && k == key) > 0 && other != action)
+                movedFrom.Add(label.Split("  (")[0]);
+        }
+        _keys.For(action).Add(key.ToString());
+
+        _capturing = null;
+        ControlsStatus.Text = $"{KeyMap.Describe(key)} added" + (movedFrom.Count > 0 ? $" (moved from {string.Join(", ", movedFrom)})." : ".");
+        ShowKeys();
     }
 
     void Field_Changed(object sender, RoutedEventArgs e) => UpdateStatus();
@@ -169,6 +280,17 @@ public partial class SettingsWindow : Window
 
     void Save_Click(object sender, RoutedEventArgs e)
     {
+        // Without these there would be no way back into settings or out of the launcher.
+        var missing = new[] { (LauncherAction.Settings, "Settings"), (LauncherAction.Exit, "Quit launcher") }
+            .Where(a => _keys.For(a.Item1).Count == 0).Select(a => a.Item2).ToList();
+        if (missing.Count > 0)
+        {
+            ControlsStatus.Text = $"Give {string.Join(" and ", missing)} at least one key before saving.";
+            ControlsStatus.Foreground = WarningBrush;
+            ControlsStatus.BringIntoView();
+            return;
+        }
+
         Result.VpxExePath = VpxExeBox.Text.Trim();
         Result.LaunchArguments = ArgumentsBox.Text.Trim();
         Result.TablesFolder = TablesBox.Text.Trim();
@@ -178,6 +300,7 @@ public partial class SettingsWindow : Window
         Result.UseDirectB2SImages = DirectB2SBox.IsChecked == true;
         Result.Fullscreen = FullscreenBox.IsChecked == true;
         Result.UseVps = VpsBox.IsChecked == true;
+        Result.Keys = _keys;
         DialogResult = true;
     }
 }
