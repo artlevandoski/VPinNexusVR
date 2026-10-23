@@ -2,7 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="VPin Nexus VR - Settings"
-        Width="1000" SizeToContent="Height"
+        Width="1000" Height="820"
         WindowStartupLocation="CenterOwner" ResizeMode="NoResize" ShowInTaskbar="False"
         Background="{StaticResource MidnightNavy}" FontFamily="{StaticResource BodyFont}" FontSize="18">
 
@@ -37,99 +37,159 @@
             <Setter Property="Margin" Value="0,8,0,0" />
             <Setter Property="VerticalContentAlignment" Value="Center" />
         </Style>
+
+        <!-- Tabs: plain text headers, cyan with an underline when selected -->
+        <Style TargetType="TabControl">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TabControl">
+                        <DockPanel>
+                            <Border DockPanel.Dock="Top" BorderBrush="{StaticResource ChromeShadow}" BorderThickness="0,0,0,2">
+                                <TabPanel IsItemsHost="True" />
+                            </Border>
+                            <ContentPresenter ContentSource="SelectedContent" />
+                        </DockPanel>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style TargetType="TabItem">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TabItem">
+                        <Border x:Name="Tab" Padding="22,10" Margin="0,0,6,-2" Background="Transparent"
+                                BorderBrush="Transparent" BorderThickness="0,0,0,3" Cursor="Hand">
+                            <TextBlock x:Name="Label" Text="{TemplateBinding Header}" FontFamily="{StaticResource TitleFont}"
+                                       FontWeight="Bold" FontSize="17" Foreground="{StaticResource ChromeMidtone}" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Tab" Property="BorderBrush" Value="{StaticResource NexusCyan}" />
+                                <Setter TargetName="Label" Property="Foreground" Value="{StaticResource NexusCyan}" />
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Label" Property="Foreground" Value="{StaticResource SilverWhite}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
 
-    <ScrollViewer VerticalScrollBarVisibility="Auto">
-    <StackPanel Margin="30,12,30,24">
-
-        <TextBlock Style="{StaticResource Heading}" Text="VPX executable" />
-        <DockPanel>
-            <Button DockPanel.Dock="Right" Content="Browse…" Click="BrowseVpx_Click" />
-            <TextBox x:Name="VpxExeBox" TextChanged="Field_Changed" />
-        </DockPanel>
-        <TextBlock x:Name="VpxStatus" Style="{StaticResource Hint}" />
-
-        <TextBlock Style="{StaticResource Heading}" Text="Launch arguments" />
-        <TextBox x:Name="ArgumentsBox" />
-        <TextBlock Style="{StaticResource Hint}"
-                   Text="{}{table} is replaced with the full path of the selected table. Default: -Minimized -Play &quot;{table}&quot;" />
-
-        <TextBlock Style="{StaticResource Heading}" Text="Tables folder" />
-        <DockPanel>
-            <Button DockPanel.Dock="Right" Content="Browse…" Click="BrowseTables_Click" />
-            <TextBox x:Name="TablesBox" TextChanged="Field_Changed" />
-        </DockPanel>
-        <CheckBox x:Name="SubfoldersBox" Content="Include subfolders" Click="Field_Changed" />
-        <TextBlock x:Name="TablesStatus" Style="{StaticResource Hint}" />
-
-        <TextBlock Style="{StaticResource Heading}" Text="Wheel images" />
-        <DockPanel>
-            <Button DockPanel.Dock="Right" Content="Open" Click="OpenWheelMedia_Click" />
-            <TextBlock x:Name="WheelMediaText" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-        </DockPanel>
-        <TextBlock Style="{StaticResource Hint}"
-                   Text="Built-in folder, searched first. Add or replace a picture by saving it as &quot;Table Name (Maker Year).png&quot;." />
-        <TextBlock Text="Other wheel folders (searched top to bottom):" Margin="0,10,0,4" />
-        <DockPanel>
-            <StackPanel DockPanel.Dock="Right">
-                <Button Content="Add…" Tag="Wheels" Click="AddFolder_Click" />
-                <Button Content="Remove" Tag="Wheels" Click="RemoveFolder_Click" Margin="8,8,0,0" />
-                <Button Content="Move up" Tag="Wheels" Click="MoveUp_Click" Margin="8,8,0,0" />
-            </StackPanel>
-            <ListBox x:Name="ImageFoldersList" Height="110" />
-        </DockPanel>
-        <TextBlock x:Name="ImagesStatus" Style="{StaticResource Hint}" />
-        <CheckBox x:Name="DirectB2SBox" Content="If there is no wheel, use the backglass from a matching .directb2s file" />
-
-        <TextBlock Style="{StaticResource Heading}" Text="Rules cards" />
-        <DockPanel>
-            <Button DockPanel.Dock="Right" Content="Open" Click="OpenRulesMedia_Click" />
-            <TextBlock x:Name="RulesMediaText" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-        </DockPanel>
-        <TextBlock Style="{StaticResource Hint}"
-                   Text="Built-in folder, searched first. Name rules cards like the wheel images." />
-        <TextBlock Text="Other rules folders (searched top to bottom):" Margin="0,10,0,4" />
-        <DockPanel>
-            <StackPanel DockPanel.Dock="Right">
-                <Button Content="Add…" Tag="Rules" Click="AddFolder_Click" />
-                <Button Content="Remove" Tag="Rules" Click="RemoveFolder_Click" Margin="8,8,0,0" />
-                <Button Content="Move up" Tag="Rules" Click="MoveUp_Click" Margin="8,8,0,0" />
-            </StackPanel>
-            <ListBox x:Name="RulesFoldersList" Height="110" />
-        </DockPanel>
-        <TextBlock x:Name="RulesStatus" Style="{StaticResource Hint}" />
-
-        <TextBlock Style="{StaticResource Heading}" Text="Virtual Pinball Spreadsheet" />
-        <CheckBox x:Name="VpsBox" Content="Use VPS data: game info, filters, update check" />
-
-        <TextBlock Style="{StaticResource Heading}" Text="Music" />
-        <CheckBox x:Name="MusicBox" Content="Play quiet background music" />
-        <DockPanel Margin="0,8,0,0">
-            <TextBlock Text="Volume" Width="90" VerticalAlignment="Center" />
-            <TextBlock x:Name="MusicVolumeText" DockPanel.Dock="Right" Width="60" TextAlignment="Right" VerticalAlignment="Center" />
-            <Slider x:Name="MusicVolumeSlider" Minimum="0" Maximum="100" SmallChange="1" LargeChange="5"
-                    IsSnapToTickEnabled="True" TickFrequency="1" VerticalAlignment="Center" ValueChanged="MusicVolume_Changed" />
-        </DockPanel>
-        <TextBlock Style="{StaticResource Hint}"
-                   Text="Plays the built-in track, or any MP3s you put in Media\Music (shuffled). Fades out while a table is playing." />
-
-        <TextBlock Style="{StaticResource Heading}" Text="Display" />
-        <CheckBox x:Name="FullscreenBox" Content="Fullscreen (hides the mouse pointer)" />
-
-        <TextBlock Style="{StaticResource Heading}" Text="Controls" />
-        <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,8"
-                   Text="Click Add key…, then press the button on your stub (or a key). Each key does one thing, so it is moved from any other action. The menu shows the cabinet button names; this list shows the keys they send." />
-        <!-- One row per action, built in code -->
-        <StackPanel x:Name="ControlsPanel" />
-        <DockPanel Margin="0,8,0,0">
-            <Button DockPanel.Dock="Right" Content="Reset to defaults" Click="ResetControls_Click" />
-            <TextBlock x:Name="ControlsStatus" Style="{StaticResource Hint}" VerticalAlignment="Center" Margin="0" />
-        </DockPanel>
-
-        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,28,0,0">
+    <DockPanel Margin="30,16,30,24">
+        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
             <Button Content="Save" IsDefault="True" Click="Save_Click" FontWeight="Bold" />
             <Button Content="Cancel" IsCancel="True" />
         </StackPanel>
-    </StackPanel>
-    </ScrollViewer>
+
+        <TabControl x:Name="Tabs">
+
+            <!-- ===== General ===== -->
+            <TabItem Header="GENERAL">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource Heading}" Text="VPX executable" />
+                    <DockPanel>
+                        <Button DockPanel.Dock="Right" Content="Browse…" Click="BrowseVpx_Click" />
+                        <TextBox x:Name="VpxExeBox" TextChanged="Field_Changed" />
+                    </DockPanel>
+                    <TextBlock x:Name="VpxStatus" Style="{StaticResource Hint}" />
+
+                    <TextBlock Style="{StaticResource Heading}" Text="Launch arguments" />
+                    <TextBox x:Name="ArgumentsBox" />
+                    <TextBlock Style="{StaticResource Hint}"
+                               Text="{}{table} is replaced with the full path of the selected table. Default: -Minimized -Play &quot;{table}&quot;" />
+
+                    <TextBlock Style="{StaticResource Heading}" Text="Tables folder" />
+                    <DockPanel>
+                        <Button DockPanel.Dock="Right" Content="Browse…" Click="BrowseTables_Click" />
+                        <TextBox x:Name="TablesBox" TextChanged="Field_Changed" />
+                    </DockPanel>
+                    <CheckBox x:Name="SubfoldersBox" Content="Include subfolders" Click="Field_Changed" />
+                    <TextBlock x:Name="TablesStatus" Style="{StaticResource Hint}" />
+
+                    <TextBlock Style="{StaticResource Heading}" Text="Virtual Pinball Spreadsheet" />
+                    <CheckBox x:Name="VpsBox" Content="Use VPS data: game info, filters, update check" />
+
+                    <TextBlock Style="{StaticResource Heading}" Text="Display" />
+                    <CheckBox x:Name="FullscreenBox" Content="Fullscreen (hides the mouse pointer)" />
+                </StackPanel>
+            </TabItem>
+
+            <!-- ===== Images ===== -->
+            <TabItem Header="IMAGES">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource Heading}" Text="Wheel images" />
+                    <DockPanel>
+                        <Button DockPanel.Dock="Right" Content="Open" Click="OpenWheelMedia_Click" />
+                        <TextBlock x:Name="WheelMediaText" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                    </DockPanel>
+                    <TextBlock Style="{StaticResource Hint}"
+                               Text="Built-in folder, searched first. Add or replace a picture by saving it as &quot;Table Name (Maker Year).png&quot;." />
+                    <TextBlock Text="Other wheel folders (searched top to bottom):" Margin="0,10,0,4" />
+                    <DockPanel>
+                        <StackPanel DockPanel.Dock="Right">
+                            <Button Content="Add…" Tag="Wheels" Click="AddFolder_Click" />
+                            <Button Content="Remove" Tag="Wheels" Click="RemoveFolder_Click" Margin="8,8,0,0" />
+                            <Button Content="Move up" Tag="Wheels" Click="MoveUp_Click" Margin="8,8,0,0" />
+                        </StackPanel>
+                        <ListBox x:Name="ImageFoldersList" Height="110" />
+                    </DockPanel>
+                    <TextBlock x:Name="ImagesStatus" Style="{StaticResource Hint}" />
+                    <CheckBox x:Name="DirectB2SBox" Content="If there is no wheel, use the backglass from a matching .directb2s file" />
+
+                    <TextBlock Style="{StaticResource Heading}" Text="Rules cards" />
+                    <DockPanel>
+                        <Button DockPanel.Dock="Right" Content="Open" Click="OpenRulesMedia_Click" />
+                        <TextBlock x:Name="RulesMediaText" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                    </DockPanel>
+                    <TextBlock Style="{StaticResource Hint}"
+                               Text="Built-in folder, searched first. Name rules cards like the wheel images; _default.png is shown for tables without one." />
+                    <TextBlock Text="Other rules folders (searched top to bottom):" Margin="0,10,0,4" />
+                    <DockPanel>
+                        <StackPanel DockPanel.Dock="Right">
+                            <Button Content="Add…" Tag="Rules" Click="AddFolder_Click" />
+                            <Button Content="Remove" Tag="Rules" Click="RemoveFolder_Click" Margin="8,8,0,0" />
+                            <Button Content="Move up" Tag="Rules" Click="MoveUp_Click" Margin="8,8,0,0" />
+                        </StackPanel>
+                        <ListBox x:Name="RulesFoldersList" Height="110" />
+                    </DockPanel>
+                    <TextBlock x:Name="RulesStatus" Style="{StaticResource Hint}" />
+                </StackPanel>
+            </TabItem>
+
+            <!-- ===== Controls ===== -->
+            <TabItem x:Name="ControlsTab" Header="CONTROLS">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource Hint}" Margin="0,14,0,8"
+                               Text="Click Add key…, then press the button on your stub (or a key). Each key does one thing, so it is moved from any other action. The menu shows the cabinet button names; this list shows the keys they send." />
+                    <!-- One row per action, built in code -->
+                    <StackPanel x:Name="ControlsPanel" />
+                    <DockPanel Margin="0,8,0,0">
+                        <Button DockPanel.Dock="Right" Content="Reset to defaults" Click="ResetControls_Click" />
+                        <TextBlock x:Name="ControlsStatus" Style="{StaticResource Hint}" VerticalAlignment="Center" Margin="0" />
+                    </DockPanel>
+                </StackPanel>
+            </TabItem>
+
+            <!-- ===== Music ===== -->
+            <TabItem Header="MUSIC">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource Heading}" Text="Background music" />
+                    <CheckBox x:Name="MusicBox" Content="Play quiet background music" />
+                    <DockPanel Margin="0,12,0,0">
+                        <TextBlock Text="Volume" Width="90" VerticalAlignment="Center" />
+                        <TextBlock x:Name="MusicVolumeText" DockPanel.Dock="Right" Width="60" TextAlignment="Right" VerticalAlignment="Center" />
+                        <Slider x:Name="MusicVolumeSlider" Minimum="0" Maximum="100" SmallChange="1" LargeChange="5"
+                                IsSnapToTickEnabled="True" TickFrequency="1" VerticalAlignment="Center" ValueChanged="MusicVolume_Changed" />
+                    </DockPanel>
+                    <TextBlock Style="{StaticResource Hint}"
+                               Text="Plays the built-in track, or any MP3s you put in Media\Music (shuffled). Fades out while a table is playing. The music on/off key is in Controls." />
+                </StackPanel>
+            </TabItem>
+        </TabControl>
+    </DockPanel>
 </Window>

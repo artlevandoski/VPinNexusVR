@@ -296,7 +296,7 @@ public partial class SettingsWindow : Window
         {
             ControlsStatus.Text = $"Give {string.Join(" and ", missing)} at least one key before saving.";
             ControlsStatus.Foreground = WarningBrush;
-            ControlsStatus.BringIntoView();
+            Tabs.SelectedItem = ControlsTab;
             return;
         }
 

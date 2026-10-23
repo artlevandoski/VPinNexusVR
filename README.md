@@ -82,7 +82,7 @@ A `_default` image in a `Media` folder always takes priority over the built-in o
 
 ## Settings window
 
-Press **F2** to set the VPX exe, launch arguments, tables folder and wheel/image folders with Browse buttons. It shows how many tables and images it finds as you go, and **Save** applies the changes immediately.
+Press **F2** to open settings. It has four tabs: **General** (VPX, tables folder, VPS, fullscreen), **Images** (wheel and rules folders), **Controls** (key bindings) and **Music**. Use it to set the VPX exe, launch arguments, tables folder and wheel/image folders with Browse buttons. It shows how many tables and images it finds as you go, and **Save** applies the changes immediately.
 It also opens by itself at startup if the VPX exe or tables folder can't be found.
 Saving rewrites `settings.json`, so any comments you added to that file are removed. Timings (input cooldown, exit hold) can only be changed in the file.
 
