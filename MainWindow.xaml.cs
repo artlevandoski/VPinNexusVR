@@ -622,12 +622,32 @@ public partial class MainWindow : Window
         if (_settings.MinimizeWhileRunning)
             WindowState = WindowState.Minimized;
 
+        // Wait for VPX to exit, checking once a second for a VR start-up error box it would otherwise sit behind.
+        string? vrError = null;
+        var errorClosedAt = DateTime.MaxValue;
         using (process)
-            await process.WaitForExitAsync();
+        {
+            var exited = process.WaitForExitAsync();
+            while (await Task.WhenAny(exited, Task.Delay(1000)) != exited)
+            {
+                if (vrError == null && VrErrorWatcher.CloseVrError(process) is { } error)
+                {
+                    vrError = error;
+                    errorClosedAt = DateTime.UtcNow;
+                }
+                // Closing the error box normally ends VPX; if it doesn't within a few seconds, end it.
+                else if (DateTime.UtcNow - errorClosedAt > TimeSpan.FromSeconds(5))
+                {
+                    try { process.Kill(); } catch { /* already gone */ }
+                }
+            }
+        }
 
         _running = false;
         PlayingPanel.Visibility = Visibility.Collapsed;
         _ignoreInputUntil = DateTime.UtcNow.AddMilliseconds(_settings.InputCooldownMs);
+        if (vrError != null)
+            ShowStatus(vrError);
         BringToFront();
     }
 

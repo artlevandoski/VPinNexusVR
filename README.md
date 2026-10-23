@@ -125,6 +125,11 @@ VPX 10.7 has no command-line switch for VR: VR is a setting of the GL build. Poi
 `-Minimized` keeps the VPX editor window hidden; use `-ExtMinimized` instead if you want the pause menu.
 Launch VPX itself, not a wrapper such as `VPinballX_GL64_Launcher.exe` that starts VPX and exits straight away, or the launcher will think the game ended immediately.
 
+### When VR can't start
+
+On this setup VPX reaches the headset through OpenComposite and Virtual Desktop's OpenXR runtime. If the headset isn't connected when a table starts, OpenComposite shows an error box that can't be clicked from inside the headset.
+The launcher watches for that box while VPX runs: it closes it, makes sure VPX quits, and returns to the menu with a message (for example "VR headset not found").
+
 ### Testing with another settings file
 
 ```
