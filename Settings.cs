@@ -56,20 +56,17 @@ public sealed class KeyBindings
 
 public sealed class Settings
 {
-    public string TablesFolder { get; set; } = @"I:\vPinball\VisualPinball\Tables";
+    // Defaults for a standard install; the settings window opens on first run if they are not found.
+    public string TablesFolder { get; set; } = @"C:\VisualPinball\Tables";
     public bool IncludeSubfolders { get; set; } = false;
 
-    public string VpxExePath { get; set; } = @"I:\vPinball\VisualPinball\VPinballX_GL64.exe";
+    public string VpxExePath { get; set; } = @"C:\VisualPinball\VPinballX_GL64.exe";
 
     /// <summary>{table} is replaced with the full path of the selected .vpx file.</summary>
     public string LaunchArguments { get; set; } = "-Minimized -Play \"{table}\"";
 
-    /// <summary>Folders searched (in order) for an image named like the table.</summary>
-    public List<string> ImageFolders { get; set; } =
-    [
-        @"I:\vPinball\PinUPSystem\POPMedia\Visual Pinball X\Wheel",
-        @"I:\vPinball\VisualPinball\vpxlauncher\wheels",
-    ];
+    /// <summary>Extra folders searched (in order) for a wheel image named like the table; Media\Wheels is always searched first.</summary>
+    public List<string> ImageFolders { get; set; } = [];
 
     /// <summary>Folders searched (in order) for a rules card named like the table.</summary>
     public List<string> RulesFolders { get; set; } = [];

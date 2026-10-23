@@ -18,7 +18,19 @@ Needs the .NET 10 SDK.
 publish.cmd
 ```
 
-This writes `publish\VRPLauncher.exe`. Run it from anywhere; on first run it creates `settings.json` next to the exe.
+This writes `publish\VPinNexusVR.exe`. Run it from anywhere; on first run it creates `settings.json` next to the exe.
+
+## Making a release
+
+```
+release.cmd
+```
+
+This builds a **self-contained** exe (.NET included, so users install nothing) and zips it with `Packaging\README.txt`, `LICENSE` and the font licences into `release\VPinNexusVR-<version>-win-x64.zip`. The version comes from `<Version>` in `VRPLauncher.csproj`; bump it before each release. `release/` is not committed.
+
+To publish: on GitHub go to **Releases → Draft a new release**, create a tag such as `v0.1.0-beta`, attach the zip, tick **Set as a pre-release** and publish.
+
+New installs default to `C:\VisualPinball` for VPX and its Tables folder; if those aren't found, the settings window opens on first run.
 
 ## Default controls (VPX default keys)
 
@@ -76,7 +88,7 @@ The logo and fonts are compiled into the exe, so nothing needs installing. To ch
 
 ## Built-in default pictures
 
-Default pictures live in `Assets\Defaults` in the repo and are compiled into `VRPLauncher.exe` by `publish.cmd`, so the exe is self-contained.
+Default pictures live in `Assets\Defaults` in the repo and are compiled into `VPinNexusVR.exe` by `publish.cmd`, so the exe is self-contained.
 To change one, replace the PNG with the same name (currently `rules_default.png`) and run `publish.cmd` again.
 A `_default` image in a `Media` folder always takes priority over the built-in one.
 
@@ -147,5 +159,9 @@ The launcher watches for that box while VPX runs: it closes it, makes sure VPX q
 ### Testing with another settings file
 
 ```
-VRPLauncher.exe --settings C:\path\to\test-settings.json
+VPinNexusVR.exe --settings C:\path\to\test-settings.json
 ```
+
+## License
+
+The source code is released under the [MIT License](LICENSE). The VPin Nexus VR name, logo and icon (`Assets\Brand`), music (`Assets\Audio`) and default images (`Assets\Defaults`) are not covered and may not be reused. The Orbitron and Exo 2 fonts are under the SIL Open Font License (`Assets\Fonts\OFL-*.txt`).

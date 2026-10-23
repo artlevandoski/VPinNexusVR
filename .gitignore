@@ -13,3 +13,6 @@ state.json
 Media/
 vps/
 cache/
+
+# Release builds made by release.cmd
+release/

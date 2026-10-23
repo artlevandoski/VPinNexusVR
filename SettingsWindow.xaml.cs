@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -48,6 +49,8 @@ public partial class SettingsWindow : Window
         _wheelMediaDir = wheelMediaDir;
         _rulesMediaDir = rulesMediaDir;
         MaxHeight = SystemParameters.WorkArea.Height;
+        if (typeof(SettingsWindow).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>() is { } version)
+            Title += $"  (v{version.InformationalVersion})";
 
         VpxExeBox.Text = settings.VpxExePath;
         ArgumentsBox.Text = settings.LaunchArguments;
