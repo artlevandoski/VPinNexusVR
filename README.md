@@ -162,6 +162,10 @@ The launcher watches for that box while VPX runs: it closes it, makes sure VPX q
 VPinNexusVR.exe --settings C:\path\to\test-settings.json
 ```
 
+## Development
+
+Built with the help of [Claude Code](https://claude.com/claude-code).
+
 ## License
 
 The source code is released under the [MIT License](LICENSE). The VPin Nexus VR name, logo and icon (`Assets\Brand`), music (`Assets\Audio`) and default images (`Assets\Defaults`) are not covered and may not be reused. The Orbitron and Exo 2 fonts are under the SIL Open Font License (`Assets\Fonts\OFL-*.txt`).
