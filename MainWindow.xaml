@@ -142,16 +142,16 @@
                 </StackPanel>
             </Border>
 
-            <!-- Shown while VPX is running -->
+            <!-- Shown while VPX loads a table and while it runs -->
             <Grid x:Name="PlayingPanel" Grid.RowSpan="4" Background="{StaticResource MidnightNavy}" Visibility="Collapsed">
                 <StackPanel VerticalAlignment="Center">
-                    <Image Source="{StaticResource Logo}" Height="220" HorizontalAlignment="Center" Margin="0,0,0,40"
+                    <Image x:Name="PlayingImage" Source="{StaticResource Logo}" Height="220" HorizontalAlignment="Center" Margin="0,0,0,40"
                            RenderOptions.BitmapScalingMode="HighQuality" />
-                    <TextBlock Text="NOW PLAYING" Style="{StaticResource Title}" FontWeight="Black" FontSize="48"
+                    <TextBlock x:Name="PlayingHeader" Text="NOW PLAYING" Style="{StaticResource Title}" FontWeight="Black" FontSize="48"
                                Foreground="{StaticResource VrOrange}" HorizontalAlignment="Center" />
                     <TextBlock x:Name="PlayingText" Style="{StaticResource Title}" FontSize="72" Foreground="{StaticResource SilverWhite}"
                                HorizontalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="1800" Margin="0,20,0,0" />
-                    <TextBlock Text="Quit the table in VPX to come back here" FontSize="36" Foreground="{StaticResource ChromeMidtone}"
+                    <TextBlock x:Name="PlayingHint" Text="Quit the table in VPX to come back here" FontSize="36" Foreground="{StaticResource ChromeMidtone}"
                                HorizontalAlignment="Center" Margin="0,40,0,0" />
                 </StackPanel>
             </Grid>

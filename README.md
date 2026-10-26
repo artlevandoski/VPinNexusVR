@@ -151,6 +151,10 @@ VPX 10.7 has no command-line switch for VR: VR is a setting of the GL build. Poi
 `-Minimized` keeps the VPX editor window hidden; use `-ExtMinimized` instead if you want the pause menu.
 Launch VPX itself, not a wrapper such as `VPinballX_GL64_Launcher.exe` that starts VPX and exits straight away, or the launcher will think the game ended immediately.
 
+### Loading screen
+
+While a table loads, the launcher stays up showing a LOADING screen with the table's wheel art. VPX broadcasts a `VPTableStart` window message when the playfield is ready (10.7.4 and later); the launcher then switches to "Now playing", pauses the music and minimizes. If the message never arrives (older VPX, or a load that hangs), it does this after 30 seconds anyway.
+
 ### When VR can't start
 
 On this setup VPX reaches the headset through OpenComposite and Virtual Desktop's OpenXR runtime. If the headset isn't connected when a table starts, OpenComposite shows an error box that can't be clicked from inside the headset.

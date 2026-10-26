@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -16,6 +17,13 @@ public partial class MainWindow : Window
     enum ViewerMode { Closed, Rules }
 
     const int ViewerDecodeHeight = 1000;
+
+    /// <summary>Minimize anyway if VPX never says the table started (older VPX build, or a load that hangs).</summary>
+    static readonly TimeSpan TableStartTimeout = TimeSpan.FromSeconds(30);
+
+    const uint MSGFLT_ALLOW = 1;
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern uint RegisterWindowMessage(string message);
+    [DllImport("user32.dll")] static extern bool ChangeWindowMessageFilterEx(IntPtr hWnd, uint message, uint action, IntPtr filterStatus);
 
 
     readonly string _settingsPath;
@@ -47,6 +55,8 @@ public partial class MainWindow : Window
     ViewerMode _viewer;
     int _viewerRequest;
     bool _running;
+    bool _loading;
+    uint _tableStartMessage;
     DateTime _ignoreInputUntil = DateTime.MinValue;
     Key? _exitKey;
     DateTime _exitHoldStart;
@@ -98,6 +108,28 @@ public partial class MainWindow : Window
             if (!File.Exists(_settings.VpxExePath) || !Directory.Exists(_settings.TablesFolder))
                 Dispatcher.BeginInvoke(OpenSettings, DispatcherPriority.ApplicationIdle);
         };
+    }
+
+    protected override void OnSourceInitialized(EventArgs e)
+    {
+        base.OnSourceInitialized(e);
+
+        // VPX broadcasts "VPTableStart" once the playfield is up; that's when the loading screen can go.
+        var source = (HwndSource)PresentationSource.FromVisual(this);
+        _tableStartMessage = RegisterWindowMessage("VPTableStart");
+        if (_tableStartMessage != 0)
+        {
+            // Let the broadcast through even if we run elevated and VPX doesn't.
+            ChangeWindowMessageFilterEx(source.Handle, _tableStartMessage, MSGFLT_ALLOW, IntPtr.Zero);
+            source.AddHook(WndProc);
+        }
+    }
+
+    IntPtr WndProc(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+    {
+        if ((uint)msg == _tableStartMessage)
+            OnTableStarted();
+        return IntPtr.Zero;
     }
 
     /// <summary>(Re)applies the current settings: window mode, key map, table list and thumbnails.</summary>
@@ -629,23 +661,29 @@ public partial class MainWindow : Window
         _state.Save(_statePath);
 
         _running = true;
+        _loading = true;
         CancelExitHold();
         CloseViewer();
         HideStatus();
+        // Stay up showing the loading screen until VPX says the playfield is ready (OnTableStarted).
+        PlayingImage.Source = table.Image ?? (ImageSource)FindResource("Logo");
+        PlayingHeader.Text = "LOADING";
         PlayingText.Text = table.Title;
+        PlayingHint.Text = "The table will appear in a moment";
         PlayingPanel.Visibility = Visibility.Visible;
-        _music.Pause();
-        if (_settings.MinimizeWhileRunning)
-            WindowState = WindowState.Minimized;
 
         // Wait for VPX to exit, checking once a second for a VR start-up error box it would otherwise sit behind.
         string? vrError = null;
         var errorClosedAt = DateTime.MaxValue;
+        var startedAt = DateTime.UtcNow;
         using (process)
         {
             var exited = process.WaitForExitAsync();
             while (await Task.WhenAny(exited, Task.Delay(1000)) != exited)
             {
+                if (_loading && DateTime.UtcNow - startedAt > TableStartTimeout)
+                    OnTableStarted();
+
                 if (vrError == null && VrErrorWatcher.CloseVrError(process) is { } error)
                 {
                     vrError = error;
@@ -660,12 +698,25 @@ public partial class MainWindow : Window
         }
 
         _running = false;
+        _loading = false;
         PlayingPanel.Visibility = Visibility.Collapsed;
         _ignoreInputUntil = DateTime.UtcNow.AddMilliseconds(_settings.InputCooldownMs);
         if (vrError != null)
             ShowStatus(vrError);
         _music.Play();
         BringToFront();
+    }
+
+    /// <summary>The table is on screen (or we gave up waiting): switch to "now playing" and get out of the way.</summary>
+    void OnTableStarted()
+    {
+        if (!_loading) return;
+        _loading = false;
+        PlayingHeader.Text = "NOW PLAYING";
+        PlayingHint.Text = "Quit the table in VPX to come back here";
+        _music.Pause();
+        if (_settings.MinimizeWhileRunning)
+            WindowState = WindowState.Minimized;
     }
 
     void BringToFront()

@@ -21,6 +21,8 @@ Suggested place in the repo: `docs/ROADMAP.md`. Work through it top to bottom; e
 
 ### 1. Loading screen that waits for the playfield
 
+**Status: done.** VPX 10.7.4 also sends `VPTableStart` (the string is in its load-progress messages, between "Prerendering static parts" and "Startup done"). Tested with a stand-in process that broadcasts the message; still to confirm with a real table in the headset.
+
 **Problem:** `Launch()` minimizes the launcher as soon as VPX starts, so the headset shows the desktop or a black view while the table loads.
 
 **How:** VPX broadcasts a registered window message when the playfield is ready:
