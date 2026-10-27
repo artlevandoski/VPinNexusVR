@@ -88,16 +88,22 @@
                 </Grid.ColumnDefinitions>
             </Grid>
 
-            <!-- Selected table: title, VPS game info and update notice -->
+            <!-- Selected table: title, VPS game info, failed-launch warning and update notice -->
             <StackPanel Grid.Row="2" VerticalAlignment="Center" Margin="60,0">
                 <TextBlock x:Name="TitleText" Style="{StaticResource Title}" HorizontalAlignment="Center" TextTrimming="CharacterEllipsis"
                            FontSize="52" Foreground="{StaticResource SilverWhite}" />
                 <TextBlock x:Name="InfoText" HorizontalAlignment="Center" TextTrimming="CharacterEllipsis"
                            FontSize="28" Foreground="{StaticResource ChromeMidtone}" Margin="0,8,0,0" />
-                <Border x:Name="UpdatePanel" HorizontalAlignment="Center" Margin="0,12,0,0" Padding="16,4"
-                        CornerRadius="8" Background="{StaticResource VrOrange}" Visibility="Collapsed">
-                    <TextBlock x:Name="UpdateText" FontSize="24" FontWeight="SemiBold" Foreground="{StaticResource BadgeInk}" />
-                </Border>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                    <Border x:Name="BrokenPanel" Margin="8,12,8,0" Padding="16,4"
+                            CornerRadius="8" Background="#B00020" Visibility="Collapsed">
+                        <TextBlock x:Name="BrokenText" FontSize="24" FontWeight="SemiBold" Foreground="White" />
+                    </Border>
+                    <Border x:Name="UpdatePanel" Margin="8,12,8,0" Padding="16,4"
+                            CornerRadius="8" Background="{StaticResource VrOrange}" Visibility="Collapsed">
+                        <TextBlock x:Name="UpdateText" FontSize="24" FontWeight="SemiBold" Foreground="{StaticResource BadgeInk}" />
+                    </Border>
+                </StackPanel>
             </StackPanel>
 
             <!-- Footer: controls help -->

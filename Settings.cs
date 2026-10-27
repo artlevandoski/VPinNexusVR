@@ -148,6 +148,12 @@ public sealed class TableStats
 
     /// <summary>Total time VPX ran this table, in seconds.</summary>
     public double RunTime { get; set; }
+
+    /// <summary>The last launch failed (VPX quit straight away or with an error code); cleared by the next good run.</summary>
+    public bool Broken { get; set; }
+
+    /// <summary>Why the last launch counted as failed, for the card's warning badge.</summary>
+    public string? FailReason { get; set; }
 }
 
 /// <summary>Small runtime state kept apart from settings.json so the user's file is never rewritten.</summary>

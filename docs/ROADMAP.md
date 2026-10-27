@@ -52,6 +52,8 @@ Suggested place in the repo: `docs/ROADMAP.md`. Work through it top to bottom; e
 
 ### 3. Broken-table detection
 
+**Status: done.** `TableStats.Broken` plus a `FailReason` shown in the badge ("VPX quit after 2 s" / "VPX exited with error code 0xC0000005"). Tested with a stand-in script; still to confirm that VPX 10.7.4 returns exit code 0 when a table is quit normally, or every table would be flagged.
+
 - If VPX exits within ~5 s of launch, or with a non-zero exit code (and it wasn't the VR error path), mark the table `Broken = true` in its state record.
 - Show a warning badge on its card ("Last launch failed").
 - On startup, don't auto-select a broken `LastTable`; fall back to the first table.

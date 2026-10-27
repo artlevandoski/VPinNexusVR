@@ -54,6 +54,10 @@ Three filters appear once there is something in them, right after All tables: **
 
 All of this is kept in `state.json` next to `settings.json`, keyed by the table's file path, so renaming or moving a table file starts its history again.
 
+### Failed launches
+
+If VPX quits within 5 seconds of launching a table, or exits with an error code, the table gets a red "Last launch failed" badge saying which (a VR start-up error is reported on its own instead). The launcher won't reopen on that table next time; it starts at the first table. The badge goes away the next time the table runs normally.
+
 ## Virtual Pinball Spreadsheet (VPS)
 
 At startup the launcher loads its cached copy of `vpsdb.json` and then checks `lastUpdated.json` on VPS in the background. It only downloads the 8 MB database again when that stamp has changed.

@@ -23,6 +23,9 @@ public partial class MainWindow : Window
     /// <summary>Minimize anyway if VPX never says the table started (older VPX build, or a load that hangs).</summary>
     static readonly TimeSpan TableStartTimeout = TimeSpan.FromSeconds(30);
 
+    /// <summary>VPX quitting sooner than this after launch means the table failed to load.</summary>
+    static readonly TimeSpan BrokenRunTime = TimeSpan.FromSeconds(5);
+
     const uint MSGFLT_ALLOW = 1;
     [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern uint RegisterWindowMessage(string message);
     [DllImport("user32.dll")] static extern bool ChangeWindowMessageFilterEx(IntPtr hWnd, uint message, uint action, IntPtr filterStatus);
@@ -181,7 +184,8 @@ public partial class MainWindow : Window
         if (_vps != null && _vpsIndex != null)
             MatchVps();
         BuildFilters();
-        ApplyFilter(_state.LastTable);
+        // Don't start on a table whose last launch failed: null keeps the current selection, or the first table at startup.
+        ApplyFilter(_state.LastTable is { } last && _state.Find(last)?.Broken != true ? last : null);
 
         if (_vps != null && _vpsIndex == null)
             _ = LoadVpsAsync();
@@ -394,6 +398,7 @@ public partial class MainWindow : Window
             TitleText.Text = "No tables";
             InfoText.Text = _settings.TablesFolder;
             UpdatePanel.Visibility = Visibility.Collapsed;
+            BrokenPanel.Visibility = Visibility.Collapsed;
             CounterText.Text = "";
             LetterText.Text = "";
             _viewer = ViewerMode.Closed;
@@ -403,9 +408,12 @@ public partial class MainWindow : Window
 
         var current = _tables[_index];
         TitleText.Text = current.Name; // maker and year are on the info line below
-        InfoText.Text = string.Join("  ·  ", new[] { DescribeGame(current), DescribePlays(_state.Find(current.FilePath)) }.Where(s => s != ""));
+        var stats = _state.Find(current.FilePath);
+        InfoText.Text = string.Join("  ·  ", new[] { DescribeGame(current), DescribePlays(stats) }.Where(s => s != ""));
         UpdatePanel.Visibility = current.Vps?.UpdateVersion != null ? Visibility.Visible : Visibility.Collapsed;
         UpdateText.Text = $"Newer version on VPS: {current.Vps?.UpdateVersion}";
+        BrokenPanel.Visibility = stats?.Broken == true ? Visibility.Visible : Visibility.Collapsed;
+        BrokenText.Text = $"⚠ Last launch failed: {stats?.FailReason}";
         CounterText.Text = $"{_index + 1} / {_tables.Count}";
         LetterText.Text = current.Group.ToString();
 
@@ -743,6 +751,7 @@ public partial class MainWindow : Window
         string? vrError = null;
         var errorClosedAt = DateTime.MaxValue;
         var startedAt = DateTime.UtcNow;
+        int exitCode;
         using (process)
         {
             var exited = process.WaitForExitAsync();
@@ -762,13 +771,24 @@ public partial class MainWindow : Window
                     try { process.Kill(); } catch { /* already gone */ }
                 }
             }
+            exitCode = process.ExitCode;
         }
 
         _running = false;
         _loading = false;
-        stats.RunTime += (DateTime.UtcNow - startedAt).TotalSeconds;
+        var runTime = DateTime.UtcNow - startedAt;
+        stats.RunTime += runTime.TotalSeconds;
+        // A VR start-up error has its own message and says nothing about the table itself.
+        if (vrError == null)
+        {
+            stats.FailReason =
+                runTime < BrokenRunTime ? $"VPX quit after {Math.Max(1, (int)runTime.TotalSeconds)} s"
+                : exitCode != 0 ? $"VPX exited with error code {(exitCode < 0 ? $"0x{exitCode:X8}" : exitCode)}"
+                : null;
+            stats.Broken = stats.FailReason != null;
+        }
         _state.Save(_statePath);
-        // The play history filters and the info line have changed.
+        // The play history filters, the info line and the warning badge have changed.
         BuildFilters();
         ApplyFilter(table.FilePath);
         PlayingPanel.Visibility = Visibility.Collapsed;
