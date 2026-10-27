@@ -8,7 +8,7 @@ It is built to be driven entirely from a VR pinball stub's buttons and to read w
 - Rules cards from the built-in `Media\Rules` folder (and any extra rules folders), shown full screen on request.
 - Uses the [Virtual Pinball Spreadsheet](https://virtualpinballspreadsheet.github.io/) database for game info, backglass pictures, filters and "newer version available" notices.
 - Launches VPX with configurable arguments, then brings itself back to the foreground when VPX exits.
-- Remembers the last table you played.
+- Remembers the last table you played, your favourites, and how often and how long you've played each table.
 
 ## Build
 
@@ -42,7 +42,17 @@ New installs default to `C:\VisualPinball` for VPX and its Tables folder; if tho
 | Quit the launcher | hold Esc for 1.5 s | Exit |
 | Show / close the rules card | 5, V | Coin |
 | Next / previous filter | 2, F / G | Extra ball (2) |
+| Favourite on / off | 3 | whichever button sends 3 |
+| Music on / off | M | (keyboard) |
 | Open settings | F2 | (keyboard) |
+
+## Favourites and play history
+
+Press **3** to star or unstar the selected table; favourites show an orange star on their card. Each time a table is launched the launcher counts the start and adds the time until VPX exits, and the info line under the table shows it ("Played 3 times, 1 h 20 min").
+
+Three filters appear once there is something in them, right after All tables: **Favourites**, **Recently played** (last played first) and **Most played** (most starts first, then most play time).
+
+All of this is kept in `state.json` next to `settings.json`, keyed by the table's file path, so renaming or moving a table file starts its history again.
 
 ## Virtual Pinball Spreadsheet (VPS)
 
@@ -54,7 +64,7 @@ Each table is matched to a VPS game by the "Name (Maker Year)" part of its file 
 - **Game info:** manufacturer, year, type, players, theme and designers are shown under the selected table.
 - **Rules:** press **Coin** (5) to show the table's rules card full screen and again to close it. The flippers browse tables while it is open, and Esc also closes it.
 - **Updates:** if VPS lists a newer VPX release whose *main* author appears in your file name (for example "VPW" or "RobbyKingPin"), a green "Newer version on VPS" badge is shown. Releases where your author is only a contributor are ignored. Some newer releases need a newer VPX than 10.7, so check the release notes before updating.
-- **Filters:** **2** cycles through All tables, Updates on VPS, Electro-mechanical / Solid state, decades, and every manufacturer with at least 3 tables. The current filter is shown at the top left.
+- **Filters:** **2** cycles through All tables, Favourites / Recently played / Most played (see above), Updates on VPS, Electro-mechanical / Solid state, decades, and every manufacturer with at least 3 tables. The current filter is shown at the top left.
 
 Untick "Use VPS data" in the settings window to turn all of this off.
 
@@ -137,7 +147,8 @@ Quitting needs a hold so that the Esc press that closes VPX can't also close the
     "View": ["D5", "V"],
     "NextFilter": ["D2", "F"],
     "PreviousFilter": ["G"],
-    "ToggleMusic": ["M"]
+    "ToggleMusic": ["M"],
+    "ToggleFavorite": ["D3"]
   }
 }
 ```

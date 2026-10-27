@@ -21,7 +21,7 @@ Suggested place in the repo: `docs/ROADMAP.md`. Work through it top to bottom; e
 
 ### 1. Loading screen that waits for the playfield
 
-**Status: done.** VPX 10.7.4 also sends `VPTableStart` (the string is in its load-progress messages, between "Prerendering static parts" and "Startup done"). Tested with a stand-in process that broadcasts the message; still to confirm with a real table in the headset.
+**Status: done.** VPX 10.7.4 also sends `VPTableStart` (the string is in its load-progress messages, between "Prerendering static parts" and "Startup done"). Confirmed with a real table in the headset.
 
 **Problem:** `Launch()` minimizes the launcher as soon as VPX starts, so the headset shows the desktop or a black view while the table loads.
 
@@ -40,6 +40,8 @@ Suggested place in the repo: `docs/ROADMAP.md`. Work through it top to bottom; e
 **Done when:** launching a table shows the loading panel until the playfield appears, then the launcher gets out of the way.
 
 ### 2. Favorites, recently played, play count and play time
+
+**Status: done.** Toggle Favorite defaults to key **3**. Run time is measured from launch to VPX exit, so it includes the loading screen. The play-history filters only appear once a table has been played or starred.
 
 - Add `LauncherAction.ToggleFavorite` to `KeyMap.cs` with a default key, and show it in the legend and the Controls tab.
 - Extend `LauncherState` with a per-table record keyed by file path: `Favorite`, `LastRun`, `StartCount`, `RunTime` (seconds).

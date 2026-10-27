@@ -16,6 +16,7 @@ public sealed class KeyBindings
     public List<string> NextFilter { get; set; } = ["D2", "F"];
     public List<string> PreviousFilter { get; set; } = ["G"];
     public List<string> ToggleMusic { get; set; } = ["M"];
+    public List<string> ToggleFavorite { get; set; } = ["D3"];
 
     /// <summary>The key names bound to an action.</summary>
     public List<string> For(LauncherAction action) => action switch
@@ -31,6 +32,7 @@ public sealed class KeyBindings
         LauncherAction.NextFilter => NextFilter,
         LauncherAction.PreviousFilter => PreviousFilter,
         LauncherAction.ToggleMusic => ToggleMusic,
+        LauncherAction.ToggleFavorite => ToggleFavorite,
         _ => throw new ArgumentOutOfRangeException(nameof(action)),
     };
 
@@ -49,6 +51,7 @@ public sealed class KeyBindings
             case LauncherAction.NextFilter: NextFilter = keys; break;
             case LauncherAction.PreviousFilter: PreviousFilter = keys; break;
             case LauncherAction.ToggleMusic: ToggleMusic = keys; break;
+            case LauncherAction.ToggleFavorite: ToggleFavorite = keys; break;
             default: throw new ArgumentOutOfRangeException(nameof(action));
         }
     }
@@ -136,21 +139,52 @@ public sealed class Settings
     }
 }
 
+/// <summary>What the launcher remembers about one table.</summary>
+public sealed class TableStats
+{
+    public bool Favorite { get; set; }
+    public DateTime? LastRun { get; set; }
+    public int StartCount { get; set; }
+
+    /// <summary>Total time VPX ran this table, in seconds.</summary>
+    public double RunTime { get; set; }
+}
+
 /// <summary>Small runtime state kept apart from settings.json so the user's file is never rewritten.</summary>
 public sealed class LauncherState
 {
     public string? LastTable { get; set; }
 
+    /// <summary>Per-table favourite flag and play statistics, keyed by the table's file path.</summary>
+    public Dictionary<string, TableStats> Tables { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
+    static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
+
+    /// <summary>The table's record, or null if it has never been played or favourited.</summary>
+    public TableStats? Find(string filePath) => Tables.GetValueOrDefault(filePath);
+
+    /// <summary>The table's record, created if needed.</summary>
+    public TableStats For(string filePath)
+    {
+        if (!Tables.TryGetValue(filePath, out var stats))
+            Tables[filePath] = stats = new TableStats();
+        return stats;
+    }
+
     public static LauncherState Load(string path)
     {
         try
         {
-            if (File.Exists(path))
-                return JsonSerializer.Deserialize<LauncherState>(File.ReadAllText(path)) ?? new LauncherState();
+            if (File.Exists(path) && JsonSerializer.Deserialize<LauncherState>(File.ReadAllText(path)) is { } state)
+            {
+                // The serializer builds a case-sensitive dictionary; paths aren't.
+                state.Tables = new Dictionary<string, TableStats>(state.Tables ?? [], StringComparer.OrdinalIgnoreCase);
+                return state;
+            }
         }
         catch
         {
-            // A broken state file only loses the remembered selection.
+            // A broken state file only loses the remembered selection and play statistics.
         }
         return new LauncherState();
     }
@@ -159,7 +193,10 @@ public sealed class LauncherState
     {
         try
         {
-            File.WriteAllText(path, JsonSerializer.Serialize(this));
+            // Write a temporary file and swap it in, so a crash mid-write can't wipe the favourites.
+            var temp = path + ".tmp";
+            File.WriteAllText(temp, JsonSerializer.Serialize(this, JsonOptions));
+            File.Move(temp, path, overwrite: true);
         }
         catch
         {

@@ -31,6 +31,7 @@ public partial class SettingsWindow : Window
         (LauncherAction.View, "Rules card  (Coin)"),
         (LauncherAction.NextFilter, "Next filter"),
         (LauncherAction.PreviousFilter, "Previous filter"),
+        (LauncherAction.ToggleFavorite, "Favourite on/off"),
         (LauncherAction.ToggleMusic, "Music on/off"),
         (LauncherAction.Exit, "Quit launcher  (hold)"),
         (LauncherAction.Settings, "Settings"),

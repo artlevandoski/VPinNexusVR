@@ -36,6 +36,9 @@ Magna Saves (Left/Right Ctrl)      jump to the previous/next letter
 Start (1)                          play the selected table
 Coin (5)                           show the rules card
 2                                  next filter
+3                                  favourite on/off (starred tables get
+                                   Favourites, Recently played and Most
+                                   played filters)
 M                                  music on/off
 F2                                 settings
 Hold Esc                           quit the launcher

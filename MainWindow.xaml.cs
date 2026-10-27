@@ -12,8 +12,10 @@ namespace VRPLauncher;
 
 public partial class MainWindow : Window
 {
-    sealed record Slot(int Offset, Border Border, Image Image, TextBlock Placeholder);
-    sealed record TableFilter(string Name, Func<TableEntry, bool> Matches);
+    sealed record Slot(int Offset, Border Border, Image Image, TextBlock Placeholder, TextBlock Star);
+
+    /// <summary>A browsable subset of the tables; <paramref name="Sort"/> reorders it (the default is the scan's alphabetical order).</summary>
+    sealed record TableFilter(string Name, Func<TableEntry, bool> Matches, Func<IEnumerable<TableEntry>, IEnumerable<TableEntry>>? Sort = null);
     enum ViewerMode { Closed, Rules }
 
     const int ViewerDecodeHeight = 1000;
@@ -164,6 +166,7 @@ public partial class MainWindow : Window
             $"{ButtonName(LauncherAction.Launch)}: play    " +
             $"{ButtonName(LauncherAction.View)}: rules    " +
             $"{_keys.Describe(LauncherAction.NextFilter)}: filter    " +
+            $"{_keys.Describe(LauncherAction.ToggleFavorite)}: favourite    " +
             $"hold {_keys.Describe(LauncherAction.Exit)}: quit    " +
             $"{_keys.Describe(LauncherAction.Settings)}: settings";
 
@@ -267,11 +270,23 @@ public partial class MainWindow : Window
 
     // ---------- Filters ----------
 
-    /// <summary>All tables, VPS updates, machine type, decade, then each manufacturer with at least 3 tables.</summary>
+    /// <summary>All tables, favourites and play history, VPS updates, machine type, decade, then each manufacturer with at least 3 tables.</summary>
     void BuildFilters()
     {
         var current = _filters.Count > 0 ? _filters[_filterIndex].Name : null;
         var filters = new List<TableFilter> { new("All tables", _ => true) };
+
+        if (_allTables.Any(t => _state.Find(t.FilePath)?.Favorite == true))
+            filters.Add(new("Favourites", t => _state.Find(t.FilePath)?.Favorite == true));
+
+        if (_allTables.Any(t => _state.Find(t.FilePath)?.StartCount > 0))
+        {
+            filters.Add(new("Recently played", t => _state.Find(t.FilePath)?.StartCount > 0,
+                tables => tables.OrderByDescending(t => _state.Find(t.FilePath)!.LastRun)));
+            filters.Add(new("Most played", t => _state.Find(t.FilePath)?.StartCount > 0,
+                tables => tables.OrderByDescending(t => _state.Find(t.FilePath)!.StartCount)
+                                .ThenByDescending(t => _state.Find(t.FilePath)!.RunTime)));
+        }
 
         if (_allTables.Any(t => t.Vps?.UpdateVersion != null))
             filters.Add(new("Updates on VPS", t => t.Vps?.UpdateVersion != null));
@@ -299,7 +314,9 @@ public partial class MainWindow : Window
     void ApplyFilter(string? selectPath)
     {
         selectPath ??= _tables.Count > 0 ? _tables[_index].FilePath : null;
-        _tables = _allTables.Where(_filters[_filterIndex].Matches).ToList();
+        var filter = _filters[_filterIndex];
+        var matches = _allTables.Where(filter.Matches);
+        _tables = (filter.Sort?.Invoke(matches) ?? matches).ToList();
         _index = Math.Max(0, _tables.FindIndex(t => t.FilePath.Equals(selectPath, StringComparison.OrdinalIgnoreCase)));
         UpdateView();
     }
@@ -341,15 +358,28 @@ public partial class MainWindow : Window
                 BorderThickness = new Thickness(distance == 0 ? 6 : 3),
                 Effect = distance == 0 ? new DropShadowEffect { Color = Color.FromRgb(0x00, 0xD8, 0xFF), BlurRadius = 40, ShadowDepth = 0, Opacity = 0.8 } : null,
             };
+            // Favourite marker in the top-right corner, over the art.
+            var star = new TextBlock
+            {
+                Text = "★",
+                FontFamily = new FontFamily("Segoe UI Symbol"),
+                FontSize = distance == 0 ? 72 : 40,
+                Foreground = (Brush)FindResource("VrOrange"),
+                HorizontalAlignment = HorizontalAlignment.Right,
+                VerticalAlignment = VerticalAlignment.Top,
+                Margin = distance == 0 ? new Thickness(0, 6, 22, 0) : new Thickness(0, 2, 12, 0),
+                Effect = new DropShadowEffect { Color = Colors.Black, BlurRadius = 12, ShadowDepth = 0, Opacity = 0.9 },
+                Visibility = Visibility.Collapsed,
+            };
             var border = new Border
             {
                 Margin = distance switch { 0 => new Thickness(16, 10, 16, 10), 1 => new Thickness(12, 80, 12, 80), _ => new Thickness(10, 140, 10, 140) },
                 Opacity = distance switch { 0 => 1.0, 1 => 0.5, _ => 0.25 },
-                Child = new Grid { Children = { frame, placeholder, image } },
+                Child = new Grid { Children = { frame, placeholder, image, star } },
             };
             Grid.SetColumn(border, offset + 2);
             Carousel.Children.Add(border);
-            _slots.Add(new Slot(offset, border, image, placeholder));
+            _slots.Add(new Slot(offset, border, image, placeholder, star));
         }
     }
 
@@ -373,7 +403,7 @@ public partial class MainWindow : Window
 
         var current = _tables[_index];
         TitleText.Text = current.Name; // maker and year are on the info line below
-        InfoText.Text = DescribeGame(current);
+        InfoText.Text = string.Join("  ·  ", new[] { DescribeGame(current), DescribePlays(_state.Find(current.FilePath)) }.Where(s => s != ""));
         UpdatePanel.Visibility = current.Vps?.UpdateVersion != null ? Visibility.Visible : Visibility.Collapsed;
         UpdateText.Text = $"Newer version on VPS: {current.Vps?.UpdateVersion}";
         CounterText.Text = $"{_index + 1} / {_tables.Count}";
@@ -392,6 +422,7 @@ public partial class MainWindow : Window
             slot.Border.Tag = table;
             slot.Image.Source = table.Image;
             slot.Placeholder.Text = table.Image == null ? table.Title : "";
+            slot.Star.Visibility = _state.Find(table.FilePath)?.Favorite == true ? Visibility.Visible : Visibility.Collapsed;
             RequestImage(table);
         }
 
@@ -418,6 +449,17 @@ public partial class MainWindow : Window
             DescribeType(game.Type),
         };
         return string.Join("  ·  ", parts.Where(s => !string.IsNullOrEmpty(s)));
+    }
+
+    /// <summary>"Played 3 times, 1 h 20 min", or "" for a table never played.</summary>
+    static string DescribePlays(TableStats? stats)
+    {
+        if (stats is not { StartCount: > 0 }) return "";
+        var count = stats.StartCount == 1 ? "Played once" : $"Played {stats.StartCount} times";
+        var time = TimeSpan.FromSeconds(stats.RunTime);
+        return time.TotalMinutes < 1 ? count
+            : time.TotalHours < 1 ? $"{count}, {(int)time.TotalMinutes} min"
+            : $"{count}, {(int)time.TotalHours} h {time.Minutes} min";
     }
 
     TableEntry TableAt(int offset) => _tables[Mod(_index + offset, _tables.Count)];
@@ -534,6 +576,7 @@ public partial class MainWindow : Window
             case LauncherAction.Exit when !e.IsRepeat: StartExitHold(key); break;
             case LauncherAction.Settings when !e.IsRepeat: OpenSettings(); break;
             case LauncherAction.ToggleMusic when !e.IsRepeat: ToggleMusic(); break;
+            case LauncherAction.ToggleFavorite when !e.IsRepeat: ToggleFavorite(); break;
         }
     }
 
@@ -588,6 +631,27 @@ public partial class MainWindow : Window
         _settings.MusicEnabled = !_settings.MusicEnabled;
         _music.ToggleEnabled(_settings.MusicEnabled);
         try { _settings.Save(_settingsPath); } catch { /* still toggled for this session */ }
+    }
+
+    /// <summary>Stars or unstars the selected table and remembers it in state.json.</summary>
+    void ToggleFavorite()
+    {
+        if (_tables.Count == 0) return;
+        var table = _tables[_index];
+        var stats = _state.For(table.FilePath);
+        stats.Favorite = !stats.Favorite;
+        _state.Save(_statePath);
+
+        // Unstarring inside Favourites drops the table from the list: stay at the same position rather than jumping to the start.
+        var position = _index;
+        HideStatus();
+        BuildFilters();
+        ApplyFilter(table.FilePath);
+        if (_tables.Count > 0 && !_tables[_index].FilePath.Equals(table.FilePath, StringComparison.OrdinalIgnoreCase))
+        {
+            _index = Math.Min(position, _tables.Count - 1);
+            UpdateView();
+        }
     }
 
     void StartExitHold(Key key)
@@ -658,6 +722,9 @@ public partial class MainWindow : Window
         }
 
         _state.LastTable = table.FilePath;
+        var stats = _state.For(table.FilePath);
+        stats.StartCount++;
+        stats.LastRun = DateTime.Now;
         _state.Save(_statePath);
 
         _running = true;
@@ -699,6 +766,11 @@ public partial class MainWindow : Window
 
         _running = false;
         _loading = false;
+        stats.RunTime += (DateTime.UtcNow - startedAt).TotalSeconds;
+        _state.Save(_statePath);
+        // The play history filters and the info line have changed.
+        BuildFilters();
+        ApplyFilter(table.FilePath);
         PlayingPanel.Visibility = Visibility.Collapsed;
         _ignoreInputUntil = DateTime.UtcNow.AddMilliseconds(_settings.InputCooldownMs);
         if (vrError != null)
